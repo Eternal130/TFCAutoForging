@@ -10,11 +10,17 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 
-@Mod(modid = TFCAutoForging.MODID, version = Tags.VERSION, name = "TFCAutoForging", acceptedMinecraftVersions = "[1.7.10]")
+@Mod(
+    modid = TFCAutoForging.MODID,
+    version = Tags.VERSION,
+    name = "TFCAutoForging",
+    acceptedMinecraftVersions = "[1.7.10]")
 public class TFCAutoForging {
 
     public static final String MODID = "tfcaf";
     public static final Logger LOG = LogManager.getLogger(MODID);
+    public static Boolean enableAutoForging = true;
+    public static Boolean enableForgingTip = true;
 
     @SidedProxy(clientSide = "com.eternal130.tfcaf.ClientProxy", serverSide = "com.eternal130.tfcaf.CommonProxy")
     public static CommonProxy proxy;
