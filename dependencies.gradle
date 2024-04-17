@@ -36,5 +36,5 @@
 dependencies {
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.5.4-GTNH:dev")
     compileOnly files("libs/[1.7.10]TerraFirmaCraftPlus-deobf-0.89.1.jar")
-//    compileOnly files("libs/[1.7.10]TerraFirmaCraftPlus-src-0.89.1.jar")
+    compileOnly files("libs/tfcquickpockets-1.1.6.jar")
 }
