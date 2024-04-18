@@ -18,7 +18,7 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
     name = TFCAutoForging.MODNAME,
     acceptedMinecraftVersions = "[1.7.10]",
     guiFactory = "com.eternal130.tfcaf.config.GUIFactory",
-    dependencies = "required-after:terrafirmacraftplus")
+    dependencies = "required-after:terrafirmacraft")
 public class TFCAutoForging {
 
     public static final String MODID = "tfcaf";

@@ -14,28 +14,23 @@ import net.minecraftforge.common.MinecraftForge;
 
 import org.lwjgl.opengl.GL11;
 
-import com.dunk.tfc.GUI.GuiAnvil;
-import com.dunk.tfc.GUI.GuiContainerTFC;
-import com.dunk.tfc.TileEntities.TEAnvil;
-import com.dunk.tfc.api.Crafting.AnvilManager;
-import com.dunk.tfc.api.Crafting.PlanRecipe;
-import com.dunk.tfc.api.Enums.RuleEnum;
+import com.bioxx.tfc.GUI.GuiAnvil;
+import com.bioxx.tfc.GUI.GuiContainerTFC;
+import com.bioxx.tfc.TileEntities.TEAnvil;
+import com.bioxx.tfc.api.Crafting.AnvilManager;
+import com.bioxx.tfc.api.Crafting.PlanRecipe;
+import com.bioxx.tfc.api.Enums.RuleEnum;
 import com.eternal130.tfcaf.TFCAutoForging;
 import com.eternal130.tfcaf.Util;
 import com.eternal130.tfcaf.config.ConfigFile;
 
-import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import tfcquickpockets.ClientStuff;
 
 public class mcEvent {
 
-    static boolean hasTFCQuickPockets = false;// 标志tfcquickpockets这个mod是否存在
-
     public mcEvent() {
-        checkPockets();
         MinecraftForge.EVENT_BUS.register(this);// 将本类中的事件处理程序注册到forge总线
     }
 
@@ -47,10 +42,9 @@ public class mcEvent {
          */
         // TFCAutoForging.LOG.info(event.gui.toString());
         try {
-            if (event.gui instanceof GuiAnvil
-                || (hasTFCQuickPockets && event.gui instanceof ClientStuff.AnvilGUIWithFastBagAccess)) {
+            if (event.gui instanceof GuiAnvil) {
                 // 检测当前gui是否是铁砧gui或者是tfcquickpocket替换后的铁砧gui
-                TEAnvil anvilTE = getAnvilTE((GuiContainerTFC) event.gui);
+                TEAnvil anvilTE = ((GuiAnvil) event.gui).anvilTE;
                 if (enableAutoForging || enableForgingTip) {
                     // 当锻造提示功能和自动锻造功能有一个开启时就计算下一步锻造步骤
                     // 当前锻造数值,此值在选择任意锻造操作时改变
@@ -211,29 +205,6 @@ public class mcEvent {
             }
         } catch (Throwable exception) {
             throw new RuntimeException(exception);
-        }
-    }
-
-    public void checkPockets() {
-        /**
-         * 使用forge提供的方法检测tfcquickpockets这个mod是否存在.
-         */
-        hasTFCQuickPockets = Loader.isModLoaded("tfcquickpockets");
-    }
-
-    private TEAnvil getAnvilTE(GuiContainerTFC gui) {
-        /**
-         * 因为实际运行时不能确定是否存在tfcquickpockets,因此将相关代码抽出来,否则注册到事件总线中无法正常运行,即使相关代码不会运行.
-         * 
-         * @param gui 事件对应的gui
-         * @return 返回值为TEAnvil
-         */
-        if (hasTFCQuickPockets) {
-            // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":存在quickpockets");
-            return ((ClientStuff.AnvilGUIWithFastBagAccess) gui).anvilTE;
-        } else {
-            // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":不存在quickpockets");
-            return ((GuiAnvil) gui).anvilTE;
         }
     }
 
