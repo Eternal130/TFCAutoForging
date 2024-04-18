@@ -3,6 +3,8 @@ package com.eternal130.tfcaf;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.eternal130.tfcaf.proxy.CommonProxy;
+
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -13,16 +15,20 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
 @Mod(
     modid = TFCAutoForging.MODID,
     version = Tags.VERSION,
-    name = "TFCAutoForging",
-    acceptedMinecraftVersions = "[1.7.10]")
+    name = TFCAutoForging.MODNAME,
+    acceptedMinecraftVersions = "[1.7.10]",
+    guiFactory = "com.eternal130.tfcaf.config.GUIFactory",
+    dependencies = "required-after:terrafirmacraftplus")
 public class TFCAutoForging {
 
     public static final String MODID = "tfcaf";
+    public static final String MODNAME = "TFC Auto Forging";
     public static final Logger LOG = LogManager.getLogger(MODID);
-    public static Boolean enableAutoForging = true;
-    public static Boolean enableForgingTip = true;
-
-    @SidedProxy(clientSide = "com.eternal130.tfcaf.ClientProxy", serverSide = "com.eternal130.tfcaf.CommonProxy")
+    public static short timer = 0;
+    // 下面的proxy会在调用时自行判断在服务器还是客户端运行
+    @SidedProxy(
+        clientSide = "com.eternal130.tfcaf.proxy.ClientProxy",
+        serverSide = "com.eternal130.tfcaf.proxy.CommonProxy")
     public static CommonProxy proxy;
 
     @Mod.EventHandler
@@ -49,4 +55,5 @@ public class TFCAutoForging {
     public void serverStarting(FMLServerStartingEvent event) {
         proxy.serverStarting(event);
     }
+
 }

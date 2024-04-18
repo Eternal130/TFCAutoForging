@@ -1,4 +1,7 @@
-package com.eternal130.tfcaf;
+package com.eternal130.tfcaf.proxy;
+
+import com.eternal130.tfcaf.TFCAutoForging;
+import com.eternal130.tfcaf.config.ConfigFile;
 
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
@@ -10,10 +13,10 @@ public class CommonProxy {
     // preInit "Run before anything else. Read your config, create blocks, items, etc, and register them with the
     // GameRegistry." (Remove if not needed)
     public void preInit(FMLPreInitializationEvent event) {
-        Config.synchronizeConfiguration(event.getSuggestedConfigurationFile());
-
-        TFCAutoForging.LOG.info(Config.greeting);
-        TFCAutoForging.LOG.info("I am MyMod at version " + Tags.VERSION);
+        // 注册配置文件
+        ConfigFile.synchronizeConfiguration(event.getSuggestedConfigurationFile());
+        TFCAutoForging.LOG.info("TFCAutoForging loaded");
+        // TFCAutoForging.LOG.info("I am MyMod at version " + Tags.VERSION);
     }
 
     // load "Do your mod setup. Build whatever data structures you care about. Register recipes." (Remove if not needed)
