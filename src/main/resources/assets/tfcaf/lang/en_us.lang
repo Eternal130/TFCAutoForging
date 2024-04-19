@@ -1,0 +1,5 @@
+key.eternal130.switchAutoForging=Switch automatic forging function
+key.eternal130.switchAutoForging.info=automatic forging function has been toggled to %s
+key.eternal130.switchForgingTip=Switch forging tip function
+key.eternal130.switchForgingTip.info=forging tip function has been toggled to %s
+key.categories.tfcaf=tfcplus auto forging

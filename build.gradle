@@ -1,5 +1,8 @@
 buildscript {
     repositories {
+        maven {
+            url "https://cursemaven.com"
+        }
         maven { url = 'https://maven.minecraftforge.net/' }
         mavenCentral()
     }
@@ -13,7 +16,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '1.0'
+version = "${mc_version}-${mod_version}"
 group = 'com.eternal130.tfcaf' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'tfcaf'
 
@@ -60,6 +63,7 @@ dependencies {
     // that the dep is a ForgeGradle 'patcher' dependency. And it's patches will be applied.
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
     minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2860'
+    compileOnly files("libs/TerraFirmaCraft-MC1.12.2-1.7.23.181-deobf.jar")
 
     // You may put jars on which you depend on in ./libs or you may define them like so..
     // compile "some.group:artifact:version:classifier"
