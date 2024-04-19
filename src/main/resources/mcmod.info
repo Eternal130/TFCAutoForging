@@ -9,11 +9,11 @@
 		"url": "https://github.com/SinTh0r4s/MyMod",
 		"updateUrl": "",
 		"authorList": ["Eternal130"],
-		"credits": "",
+		"credits": "IslenautsGK, for his mod tfcForgingTip",
 		"logoFile": "",
 		"screenshots": [],
 		"parent": "",
-		"requiredMods": [],
+		"requiredMods": ["TerraFirmaCraftPlus"],
 		"dependencies": [],
 		"dependants": [],
 		"useDependencyInformation": false
