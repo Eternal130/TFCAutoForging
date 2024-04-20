@@ -34,6 +34,6 @@ TFC Auto Forging Mod 提供了丰富的配置选项,以满足不同玩家的需�
 
 如果您在使用过程中遇到任何问题或有任何建议,欢迎通过以下渠道与我联系:
 
-- 项目 GitHub 仓库: [https://github.com/TFCAutoForging](https://github.com/TFCAutoForging)
+- 项目 GitHub 仓库: [https://github.com/Eternal130/TFCAutoForging](https://github.com/Eternal130/TFCAutoForging)
 
 我会尽快回复并解决您的问题。感谢您的支持和反馈!
