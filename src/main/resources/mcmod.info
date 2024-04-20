@@ -11,6 +11,6 @@
   "credits": "IslenautsGK, for his mod tfcForgingTip",
   "logoFile": "",
   "screenshots": [],
-  "dependencies": []
+  "dependencies": ["tfc"]
 }
 ]
