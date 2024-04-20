@@ -272,7 +272,7 @@ public class mcEvent {
                     "Is it fully automatic forging?");
             EntityPlayer player = Minecraft.getMinecraft().player;
             // 在游戏中提示当前值
-            player.sendMessage(new TextComponentTranslation("key.eternal130.switchAutoForging.info", ConfigFile.enableForgingTip));
+            player.sendMessage(new TextComponentTranslation("key.eternal130.switchAutoForging.info", ConfigFile.enableAutoForging));
             // 保存配置文件
             ConfigFile.config.save();
         }
