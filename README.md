@@ -1,39 +1,40 @@
 # TFC Auto Forging Mod
+[中文版](https://github.com/Eternal130/TFCAutoForging/blob/TFCPlus1.7.10/README_CN.md)
 
-TFC Auto Forging Mod 是 TerraFirmaCraft 所有版本的附属 Mod,提供自动锻造功能和锻造提示功能。该 Mod 所有功能均可配置,并可通过快捷键在游戏中开关。
+The TFC Auto Forging Mod is a mod for all versions of TerraFirmaCraft, providing automatic forging and forging tips functionality. All the features of this mod can be configured and can be toggled on and off in-game using hotkeys.
 
-## 功能介绍
+## Features
 
-1. **自动锻造功能**:
-  - 自动检测并执行锻造所需的步骤,仅适用于锻造,不适用于焊接。
-  - 可配置自动锻造的时间间隔和自动锻造是否开启。
-  - 可通过快捷键开启/关闭自动锻造功能。
+1. **Automatic Forging**:
+   - Automatically detects and executes the required steps for forging, only applicable to forging, not welding.
+   - Configurable interval for automatic forging and whether automatic forging is enabled.
+   - Can be toggled on/off using a hotkey.
 
-2. **锻造提示功能**:
-  - 在锻造过程中提供下一步的提示信息。
-  - 可通过快捷键开启/关闭锻造提示功能。
+2. **Forging Tips**:
+   - Provides information about the next step during the forging process.
+   - Can be toggled on/off using a hotkey.
 
-## 配置选项
+## Configuration Options
 
-TFC Auto Forging Mod 提供了丰富的配置选项,以满足不同玩家的需求:
+The TFC Auto Forging Mod provides a wide range of configuration options to meet the needs of different players:
 
-- 自动锻造的时间间隔
-- 是否开启自动锻造功能
-- 是否开启锻造提示功能
-- 快捷键设置
+- Interval for automatic forging
+- Whether to enable automatic forging
+- Whether to enable forging tips
+- Hotkey settings
 
-玩家可以根据自己的喜好,通过配置文件对这些功能进行自定义。
+Players can customize these features according to their preferences through the configuration file.
 
-## 安装与使用
+## Installation and Usage
 
-1. 从releases中下载对应tfc版本的 TFC Auto Forging Mod。
-2. 将mod放入mods文件夹
-3. 启动游戏
+1. Download the TFC Auto Forging Mod for the corresponding TFC version from the releases.
+2. Place the mod in the mods folder.
+3. Start the game.
 
-## 支持与反馈
+## Support and Feedback
 
-如果您在使用过程中遇到任何问题或有任何建议,欢迎通过以下渠道与我联系:
+If you encounter any issues or have any suggestions during the usage, please feel free to contact me through the following channels:
 
-- 项目 GitHub 仓库: [https://github.com/TFCAutoForging](https://github.com/TFCAutoForging)
+- Project GitHub repository: [https://github.com/Eternal130/TFCAutoForging](https://github.com/Eternal130/TFCAutoForging)
 
-我会尽快回复并解决您的问题。感谢您的支持和反馈!
+I will respond and resolve your issues as soon as possible. Thank you for your support and feedback!
