@@ -5,6 +5,7 @@ import static com.eternal130.tfcaf.config.ConfigFile.enableForgingTip;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.client.gui.GuiButton;
@@ -70,30 +71,9 @@ public class mcEvent {
                     int[] itemCraftingRules = anvilTE.itemCraftingRules;
                     int[] itemRules = anvilTE.getItemRules();
                     // 用于存储锻造要求，其中的值为Util类中operations的索引
-                    int[] lastOperations = new int[3];
-                    for (int i = 0; i < 3; i++) {
-                        switch (rules[i].Action) {
-                            case -1:
-                            case 3:
-                                lastOperations[i] = 4;
-                                break;
-                            case 0:
-                                lastOperations[i] = 3;
-                                break;
-                            case 1:
-                                lastOperations[i] = 0;
-                                break;
-                            case 4:
-                                lastOperations[i] = 5;
-                                break;
-                            case 5:
-                                lastOperations[i] = 6;
-                                break;
-                            case 6:
-                                lastOperations[i] = 7;
-                                break;
-                        }
-                        ruleOffset += Util.operations[lastOperations[i]];
+                    int[] lastOperations = getRules(rules);
+                    for (Integer i : lastOperations) {
+                        ruleOffset += Util.operations[i];
                     }
                     // GuiAnvil中drawItemRulesImages方法绘制最后三步步骤,drawRulesImages方法绘制锻造要求
                     // drawItemRulesImages中rules保存锻造要求,索引从左到右分别为012,itemRules保存最后三步,索引从左到右分别为012
@@ -223,5 +203,101 @@ public class mcEvent {
             .getDeclaredField("field_146292_n");
         field.setAccessible(true);
         return (List<GuiButton>) field.get(gui);
+    }
+
+    private int[] getRules(RuleEnum[] rules) {
+        int[] lastOperations = new int[3];
+        // 将锻造要求初始化为-1,表示没有要求
+        Arrays.fill(lastOperations, -1);
+        // 标志该位置要求是否已经被填充
+        boolean[] flag = new boolean[3];
+        // 首先遍历一次锻造目标,将确定位置的步骤填充到lastOperations中,例如HitLast,HitSecondFormLast,HitThirdFormLast
+        for (RuleEnum rule : rules) {
+            // 这三种序号对6取余后分别是2,3,4
+            if (rule.ordinal() % 6 == 2 && !flag[0]) {
+                lastOperations[0] = Util.operationsTfc.get(rule.Action);
+                flag[0] = true;
+            } else if (rule.ordinal() % 6 == 3 && !flag[1]) {
+                lastOperations[1] = Util.operationsTfc.get(rule.Action);
+                flag[1] = true;
+            } else if (rule.ordinal() % 6 == 4 && !flag[2]) {
+                lastOperations[2] = Util.operationsTfc.get(rule.Action);
+                flag[2] = true;
+            }
+        }
+        // 第二次遍历,填充可以位于倒数第一步和倒数第二步的步骤,例如HitLastTwo
+        for (RuleEnum rule : rules) {
+            // 这一步的序号对6取余后是5
+            if (rule.ordinal() % 6 == 5) {
+                // 如果最后一步已经填充,说明最后一步是已经定死的步骤,不可以更改,如果能进入这里的循环并且两个位置都已经填满,说明该锻造配方无法完成
+                // 所以当最后一步已经填充,就将倒数第二步填充为当前步骤,否则填充最后一步
+                if (flag[0]) {
+                    lastOperations[1] = Util.operationsTfc.get(rule.Action);
+                    flag[1] = true;
+                } else {
+                    lastOperations[0] = Util.operationsTfc.get(rule.Action);
+                    flag[0] = true;
+                }
+            }
+        }
+        // 第三次遍历,填充可以位于倒数第二步和倒数第三步的步骤,例如HitNotLast
+        for (RuleEnum rule : rules) {
+            // 这一步的序号对6取余后是0,因为Any的序号是0,所以这里要判断当前步骤不是Any
+            if (rule.Action != 0 && rule.ordinal() % 6 == 0) {
+                // 这里和上面一样,因为这两个循环填充的步骤分别适用于非倒数第三步和非最后一步,因此填充顺序分别是01和21,这样能保证每一步都成功填充
+                if (flag[2]) {
+                    lastOperations[1] = Util.operationsTfc.get(rule.Action);
+                    flag[1] = true;
+                } else {
+                    lastOperations[2] = Util.operationsTfc.get(rule.Action);
+                    flag[2] = true;
+                }
+            }
+        }
+        // 最后一次遍历,填充剩余的步骤,这里的步骤是可以位于任意位置的步骤,例如BendAny
+        o: for (RuleEnum rule : rules) {
+            // 这个步骤的序号对6取余后是1
+            if (rule.ordinal() % 6 == 1) {
+                // 遍历lastOperations,如果有空位就填充,并且因为锻造需求里每步出现一次,所以只填充一次,跳出大循环
+                for (int i = 0; i < 3; i++) {
+                    if (!flag[i]) {
+                        lastOperations[i] = Util.operationsTfc.get(rule.Action);
+                        flag[i] = true;
+                        break o;
+                    }
+                }
+            }
+        }
+        // 如果还有空位,说明锻造需求不满3个,这时将空位填入4,对应锻造数值是2,此时未遍历的需求只有Any,对于Any,填入的数值依然是4
+        for (int i = 0; i < 3; i++) {
+            if (!flag[i]) {
+                lastOperations[i] = 4;
+            }
+        }
+        // 原代码，只能匹配正常顺序的锻造要求，其他非顺序但可以完成的配方不能匹配，因此上面换了另一种填充方法
+        // for (int i = 0; i < 3; i++) {
+        // switch (rules[i].Action) {
+        // case -1:
+        // case 3:
+        // lastOperations[i] = 4;
+        // break;
+        // case 0:
+        // lastOperations[i] = 3;
+        // break;
+        // case 1:
+        // lastOperations[i] = 0;
+        // break;
+        // case 4:
+        // lastOperations[i] = 5;
+        // break;
+        // case 5:
+        // lastOperations[i] = 6;
+        // break;
+        // case 6:
+        // lastOperations[i] = 7;
+        // break;
+        // }
+        // }
+        return lastOperations;
     }
 }
