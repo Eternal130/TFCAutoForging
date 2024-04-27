@@ -243,7 +243,7 @@ public class mcEvent {
         // 第三次遍历,填充可以位于倒数第二步和倒数第三步的步骤,例如HitNotLast
         for (RuleEnum rule : rules) {
             // 这一步的序号对6取余后是0,因为Any的序号是0,所以这里要判断当前步骤不是Any
-            if (rule.Action != 0 && rule.ordinal() % 6 == 0) {
+            if (rule.ordinal() != 0 && rule.ordinal() % 6 == 0) {
                 // 这里和上面一样,因为这两个循环填充的步骤分别适用于非倒数第三步和非最后一步,因此填充顺序分别是01和21,这样能保证每一步都成功填充
                 if (flag[2]) {
                     lastOperations[1] = Util.operationsTfc.get(rule.Action);
