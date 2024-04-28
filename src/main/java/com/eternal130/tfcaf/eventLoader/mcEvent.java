@@ -5,6 +5,7 @@ import static com.eternal130.tfcaf.config.ConfigFile.enableForgingTip;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 
 import com.eternal130.tfcaf.KeyBind;
@@ -54,7 +55,7 @@ public class mcEvent {
 //                for(Field field : fields) {
 //                    TFCAutoForging.logger.info("Field: {} ,Type: {}", field.getName(), field.getType());
 //                }
-                // 检测当前gui是否是铁砧gui或者是tfcquickpocket替换后的铁砧gui
+                // 检测当前gui是否是砧gui
                 TEAnvilTFC anvilTE = getTEAnvilTFC((GuiAnvilTFC) event.getGui());
                 if (enableAutoForging || enableForgingTip) {
                     // 当锻造提示功能和自动锻造功能有一个开启时就计算下一步锻造步骤
@@ -73,58 +74,8 @@ public class mcEvent {
                     // 下面那个变量内存有最后三步,LinkedList类型,队列数据结构,最多3个元素,从左到右分别为倒数第三步,倒数第二步,倒数第一步
                     ForgeSteps steps = anvilTE.getSteps();
                     // 用于存储锻造要求，其中的值为Util类中operations的索引
-                    int[] lastOperations = new int[3];
+                    int[] lastOperations = getRules(AnvilRecipe.getRules());
                     for (int i = 0; i < 3; i++) {
-                        try {
-                            lastOperations[i] = Util.operationsTfc.get(ForgeRule.getID(AnvilRecipe.getRules()[i]));
-                        } catch (Exception e) {
-                            //这里的异常是索引越界异常,因为锻造需求相比于1.7,没有any,长度可以小于3
-                            lastOperations[i] = 4;
-                        }
-//                        switch (ForgeRule.getID(AnvilRecipe.getRules()[i])) {
-//                            case 0:
-//                            case 1:
-//                            case 2:
-//                            case 3:
-//                            case 4:
-//                                lastOperations[i] = 3;
-//                                break;
-//                            case 5:
-//                            case 6:
-//                            case 7:
-//                            case 8:
-//                            case 9:
-//                                lastOperations[i] = 0;
-//                                break;
-//                            case 10:
-//                            case 11:
-//                            case 12:
-//                            case 13:
-//                            case 14:
-//                                lastOperations[i] = 4;
-//                                break;
-//                            case 15:
-//                            case 16:
-//                            case 17:
-//                            case 18:
-//                            case 19:
-//                                lastOperations[i] = 5;
-//                                break;
-//                            case 20:
-//                            case 21:
-//                            case 22:
-//                            case 23:
-//                            case 24:
-//                                lastOperations[i] = 6;
-//                                break;
-//                            case 25:
-//                            case 26:
-//                            case 27:
-//                            case 28:
-//                            case 29:
-//                                lastOperations[i] = 7;
-//                                break;
-//                        }
                         ruleOffset += Util.operations[lastOperations[i]];
                     }
                     // GuiAnvil中drawItemRulesImages方法绘制最后三步步骤,drawRulesImages方法绘制锻造要求
@@ -319,5 +270,65 @@ public class mcEvent {
         Field fields = gui.getClass().getSuperclass().getDeclaredField("tile");
         fields.setAccessible(true);
         return (TEAnvilTFC) fields.get(gui);
+    }
+    private int[] getRules(ForgeRule[] rules) {
+        // 相对于1.7版本,没有any类型,每种步骤也只有五种位置,少了LastTwo这种类型,因此少遍历一次
+        int[] lastOperations = new int[3];
+        // 将锻造要求初始化为-1,表示没有要求
+        Arrays.fill(lastOperations, -1);
+        // 标志该位置要求是否已经被填充
+        boolean[] flag = new boolean[3];
+        // 首先遍历一次锻造目标,将确定位置的步骤填充到lastOperations中,例如Hit_Last,Hit_Second_Last,Hit_Third_Last
+        // 因为hit的last和notlast相比于其他步骤是反序的,因此单独摘出来判断
+        for (ForgeRule rule : rules) {
+            // 这三种序号对5取余后分别是1,3,4,Hit_Last的序号是2,Hit_Not_Last的序号是1,单独摘出来判断
+            if ((rule.ordinal() != 1 && rule.ordinal() % 5 == 1 && !flag[0]) || rule.ordinal() == 2) {
+                lastOperations[0] = Util.operationsTfc.get(rule.ordinal());
+                flag[0] = true;
+            } else if (rule.ordinal() % 5 == 3 && !flag[1]) {
+                lastOperations[1] = Util.operationsTfc.get(rule.ordinal());
+                flag[1] = true;
+            } else if (rule.ordinal() % 5 == 4 && !flag[2]) {
+                lastOperations[2] = Util.operationsTfc.get(rule.ordinal());
+                flag[2] = true;
+            }
+        }
+        // 第二次遍历,填充可以位于倒数第二步和倒数第三步的步骤,例如Hit_Not_Last
+        // 其他步骤的Not_last序号对5取余后是2，Hit_Not_Last的序号是1，因此单独摘出来判断
+        for (ForgeRule rule : rules) {
+            // 这一步的序号对5取余后是2
+            if ((rule.ordinal() != 2 && rule.ordinal() % 5 == 2) || rule.ordinal() == 1){
+                // 如果倒数第三步已经填充,说明倒数第三步是已经定死的步骤,不可以更改,如果能进入这里的循环并且两个位置都已经填满,说明该锻造配方无法完成
+                // 所以当倒数第三步已经填充,就将倒数第二步填充为当前步骤,否则填充最后一步
+                if (flag[2]) {
+                    lastOperations[1] = Util.operationsTfc.get(rule.ordinal());
+                    flag[1] = true;
+                } else {
+                    lastOperations[2] = Util.operationsTfc.get(rule.ordinal());
+                    flag[2] = true;
+                }
+            }
+        }
+        // 最后一次遍历,填充剩余的步骤,这里的步骤是可以位于任意位置的步骤,例如BendAny
+        o: for (ForgeRule rule : rules) {
+            // 这个步骤的序号对5取余后是0
+            if (rule.ordinal() % 5 == 0) {
+                // 遍历lastOperations,如果有空位就填充,并且因为锻造需求里每步出现一次,所以只填充一次,跳出大循环
+                for (int i = 0; i < 3; i++) {
+                    if (!flag[i]) {
+                        lastOperations[i] = Util.operationsTfc.get(rule.ordinal());
+                        flag[i] = true;
+                        break o;
+                    }
+                }
+            }
+        }
+        // 如果还有空位,说明锻造需求不满3个,这时将空位填入4,对应锻造数值是2,此时未遍历的需求只有Any,对于Any,填入的数值依然是4
+        for (int i = 0; i < 3; i++) {
+            if (!flag[i]) {
+                lastOperations[i] = 4;
+            }
+        }
+        return lastOperations;
     }
 }
