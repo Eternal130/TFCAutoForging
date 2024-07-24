@@ -255,7 +255,7 @@ public class mcEvent {
             }
         }
         // 最后一次遍历,填充剩余的步骤,这里的步骤是可以位于任意位置的步骤,例如BendAny
-        o: for (RuleEnum rule : rules) {
+        for (RuleEnum rule : rules) {
             // 这个步骤的序号对6取余后是1
             if (rule.ordinal() % 6 == 1) {
                 // 遍历lastOperations,如果有空位就填充,并且因为锻造需求里每步出现一次,所以只填充一次,跳出大循环
@@ -263,7 +263,7 @@ public class mcEvent {
                     if (!flag[i]) {
                         lastOperations[i] = Util.operationsTfc.get(rule.Action);
                         flag[i] = true;
-                        break o;
+                        break;
                     }
                 }
             }
