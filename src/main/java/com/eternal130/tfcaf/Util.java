@@ -9,7 +9,7 @@ import java.util.Map;
 public class Util {
 
     // 下面这个变量用于计算,以及所有和锻造相关的功能都会用到
-    public static final int[] operations = { -15, -9, -6, -3, 2, 7, 13, 16 };
+    public static final int[] operations = {-15, -9, -6, -3, 2, 7, 13, 16};
     // 下面这个map保存计算好的锻造步骤,k为目标锻造值-当前锻造值-锻造偏移值,v为不同锻造步骤的数量,如{1,0,0,0,0,0,0,2}表示-15的步骤一次,16的步骤两次
     public static final Map<Integer, int[]> steps = new HashMap<>();
     // 下面两个map用于将锻造按钮的k和锻造要求步骤的k映射到operations上
@@ -68,28 +68,32 @@ public class Util {
 
     public static void preCalculator() {
         // 使用动态规划计算最小步骤
-        // tfc+锻造槽150,tfc应该也是150
-        // tfc+中锻造初值在70到120之间
+        // tfc+锻造槽150,tfc应该也是150,确实是150
+        // tfc+中锻造初值在70到120之间,tng是40到113之间
+        // net.dries007.tfc.common.recipes.AnvilRecipe中computeTarget()函数显示锻造初值范围是40-113
         // 锻造指针在0到150之间
-        // target-current应该在-80到120之间,但因为查表是使用的值减去了锻造偏移,因此扩大了范围
-        // -100<=target-current<=140
-        // 0<=target-current+100<=240
-        // dp[100+i]表示锻造差值为i时的最少锻造步骤数
-        // dp[100]=0
-        // dp[100+i]=Math.min(dp[80+i-operations[j]]) +1
-        for (int i = -100; i <= 140; i++) {
-            steps.put(i, new int[] { 0, 0, 0, 0, 0, 0, 0, 0 });
+        // 这个函数是预计算到某个数值需要各种锻造步骤的数量, 结果保存在steps这个哈希map中
+        // 为了降低算法的复杂性, 输入的值是目标锻造值-当前锻造值-锻造偏移值,其中目标锻造值与种子有关,范围是40-113,
+        // 当前锻造值是砧gui槽下面的指针,范围是0-150,锻造偏移值是当前配方要求步骤的数值和,范围是-45到48
+        // 因此输入值的实际范围是-158到158
+        // 但是因为目标锻造值-锻造偏移值一定处于0-150之间,因此实际范围是-150到150,而不是-158到158
+        // dp[150+i]表示锻造差值为i时的最少锻造步骤数
+        // dp[150]=0
+        // dp[150+i]=Math.min(dp[80+i-operations[j]]) +1
+        // 上面的范围有问题,有时间我重新算
+        for (int i = -150; i <= 150; i++) {
+            steps.put(i, new int[]{0, 0, 0, 0, 0, 0, 0, 0});
         }
-        int[] dp = new int[241];
-        for (int i = 0; i < 241; i++) {
+        int[] dp = new int[301];
+        for (int i = 0; i < 301; i++) {
             dp[i] = 100;
         }
-        dp[100] = 0;
+        dp[150] = 0;
         // 这里正反两次遍历dp数组,因为单次遍历有某些值无法到达
-        for (int i = 140; i >= -100; i--) {
+        for (int i = 150; i >= -150; i--) {
             foreachoperation(dp, i);
         }
-        for (int i = -100; i <= 140; i++) {
+        for (int i = -150; i <= 150; i++) {
             foreachoperation(dp, i);
         }
         operationsTfc.put(0, 3);
@@ -141,9 +145,9 @@ public class Util {
 
     private static void foreachoperation(int[] dp, int i) {
         for (int op : operations) {
-            if (i - op >= -100 && i - op <= 140) {
-                if (dp[100 + i] > dp[100 + i - op] + 1) {
-                    dp[100 + i] = dp[100 + i - op] + 1;
+            if (i - op >= -150 && i - op <= 150) {
+                if (dp[150 + i] > dp[150 + i - op] + 1) {
+                    dp[150 + i] = dp[150 + i - op] + 1;
                     steps.put(
                             i,
                             steps.get(i - op)
