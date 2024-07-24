@@ -71,25 +71,27 @@ public class Util {
         // tfc+锻造槽150,tfc应该也是150
         // tfc+中锻造初值在70到120之间
         // 锻造指针在0到150之间
-        // target-current应该在-80到120之间,但因为查表是使用的值减去了锻造偏移,因此扩大了范围
-        // -100<=target-current<=140
-        // 0<=target-current+100<=240
-        // dp[100+i]表示锻造差值为i时的最少锻造步骤数
-        // dp[100]=0
-        // dp[100+i]=Math.min(dp[80+i-operations[j]]) +1
-        for (int i = -100; i <= 140; i++) {
+        // 这个函数是预计算到某个数值需要各种锻造步骤的数量, 结果保存在steps这个哈希map中
+        // 为了降低算法的复杂性, 输入的值是目标锻造值-当前锻造值-锻造偏移值,其中目标锻造值与种子有关,范围是40-113,
+        // 当前锻造值是砧gui槽下面的指针,范围是0-150,锻造偏移值是当前配方要求步骤的数值和,范围是-45到48
+        // 因此输入值的实际范围是-158到158
+        // 但是因为目标锻造值-锻造偏移值一定处于0-150之间,因此实际范围是-150到150,而不是-158到158
+        // dp[150+i]表示锻造差值为i时的最少锻造步骤数
+        // dp[150]=0
+        // dp[150+i]=Math.min(dp[80+i-operations[j]]) +1
+        for (int i = -150; i <= 150; i++) {
             steps.put(i, new int[] { 0, 0, 0, 0, 0, 0, 0, 0 });
         }
-        int[] dp = new int[241];
-        for (int i = 0; i < 241; i++) {
+        int[] dp = new int[301];
+        for (int i = 0; i < 301; i++) {
             dp[i] = 100;
         }
-        dp[100] = 0;
+        dp[150] = 0;
         // 这里正反两次遍历dp数组,因为单次遍历有某些值无法到达
-        for (int i = 140; i >= -100; i--) {
+        for (int i = 150; i >= -150; i--) {
             foreachoperation(dp, i);
         }
-        for (int i = -100; i <= 140; i++) {
+        for (int i = -150; i <= 150; i++) {
             foreachoperation(dp, i);
         }
         operationsTfc.put(0, 3);
@@ -141,9 +143,9 @@ public class Util {
 
     private static void foreachoperation(int[] dp, int i) {
         for (int op : operations) {
-            if (i - op >= -100 && i - op <= 140) {
-                if (dp[100 + i] > dp[100 + i - op] + 1) {
-                    dp[100 + i] = dp[100 + i - op] + 1;
+            if (i - op >= -150 && i - op <= 150) {
+                if (dp[150 + i] > dp[150 + i - op] + 1) {
+                    dp[150 + i] = dp[150 + i - op] + 1;
                     steps.put(
                             i,
                             steps.get(i - op)
