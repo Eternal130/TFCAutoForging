@@ -1,13 +1,17 @@
 package com.eternal130.tfcaf.eventLoader;
 
+import static com.eternal130.tfcaf.TFCAutoForging.LOGGER;
 import static com.eternal130.tfcaf.config.ConfigFile.enableAutoForging;
 import static com.eternal130.tfcaf.config.ConfigFile.enableForgingTip;
+import static net.minecraft.client.gui.GuiComponent.blit;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
 
 import com.eternal130.tfcaf.KeyBind;
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.*;
+import com.mojang.math.Matrix4f;
 import net.dries007.tfc.client.screen.AnvilScreen;
 import net.dries007.tfc.common.blockentities.AnvilBlockEntity;
 import net.dries007.tfc.common.capabilities.forge.ForgeRule;
@@ -16,7 +20,9 @@ import net.dries007.tfc.common.capabilities.forge.Forging;
 import net.dries007.tfc.common.recipes.AnvilRecipe;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.client.event.InputEvent;
@@ -29,8 +35,11 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import com.eternal130.tfcaf.TFCAutoForging;
 import com.eternal130.tfcaf.Util;
 import com.eternal130.tfcaf.config.ConfigFile;
+import org.lwjgl.opengl.GL11;
 
 public class mcEvent {
+
+    static ResourceLocation res = new ResourceLocation("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
 
     public mcEvent() {
         MinecraftForge.EVENT_BUS.register(this);// 将本类中的事件处理程序注册到forge总线
@@ -50,8 +59,8 @@ public class mcEvent {
 //                }
                 // 检测当前gui是否是铁砧gui
                 AnvilBlockEntity anvilTE = getTEAnvilTFC((AnvilScreen) event.getScreen());
-                Forging forging = ((AnvilBlockEntity)anvilTE).getMainInputForging();
-                Level level = ((AnvilBlockEntity)anvilTE).getLevel();
+                Forging forging = ((AnvilBlockEntity) anvilTE).getMainInputForging();
+                Level level = ((AnvilBlockEntity) anvilTE).getLevel();
                 if (enableAutoForging.get() || enableForgingTip.get()) {
                     // 当锻造提示功能和自动锻造功能有一个开启时就计算下一步锻造步骤
                     // 当前锻造数值,此值在选择任意锻造操作时改变
@@ -130,28 +139,8 @@ public class mcEvent {
                     // 如果开启锻造提示
                     if (enableForgingTip.get()) {
                         // 下面代码可以在指定位置渲染一个16*16的方框,具体怎么渲染可以去问gpt
-                        int color = 0xFF0000FF;
                         PoseStack poseStack = event.getPoseStack();
-                        GuiComponent.fill(poseStack, x, y, x+16,y+1, color); // 上边框
-                        GuiComponent.fill(poseStack, x, y+15, x+16,y+16, color); // 下边框
-                        GuiComponent.fill(poseStack, x, y, x+1,y+16, color); // 左边框
-                        GuiComponent.fill(poseStack, x+15, y, x+16,y+16, color); // 右边框
-//                        GlStateManager.color(0, 0, 1, 1);
-//                        GlStateManager.disableTexture2D();
-//                        GlStateManager.disableLighting();
-//
-//                        Tessellator tessellator = Tessellator.getInstance();
-//                        BufferBuilder bufferBuilder = tessellator.getBuffer();
-//                        bufferBuilder.begin(GL11.GL_LINE_LOOP, DefaultVertexFormats.POSITION);
-//                        bufferBuilder.pos(x, y, 100).endVertex();
-//                        bufferBuilder.pos(x, y + 16, 100).endVertex();
-//                        bufferBuilder.pos(x + 16, y + 16, 100).endVertex();
-//                        bufferBuilder.pos(x + 16, y, 100).endVertex();
-//                        tessellator.draw();
-//
-//                        GlStateManager.enableLighting();
-//                        GlStateManager.enableTexture2D();
-//                        GlStateManager.color(1, 1, 1, 1);
+                        drawbox(x, y, poseStack.last().pose());
                     }
                     // 当开启自动锻造功能并且计时器为0时
                     if (enableAutoForging.get() && TFCAutoForging.timer == 0) {
@@ -159,7 +148,7 @@ public class mcEvent {
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = ConfigFile.autoForgingCooldown.get();
                         //1.18居然能直接调用鼠标点击方法,下面那一大堆就不需要了
-                        event.getScreen().mouseClicked(x+8,y+8,0);
+                        event.getScreen().mouseClicked(x + 8, y + 8, 0);
                         // 获取按钮列表,触发按按钮事件需要这个参数
 //                        List<GuiButton> buttonlist = getButtonList((GuiContainerTFC) event.getGui());
                         // TFCAutoForging.LOG.info("待点按钮id {},待点按钮索引 {},总按钮数 {}",
@@ -199,6 +188,7 @@ public class mcEvent {
             throw new RuntimeException(exception);
         }
     }
+
     @SubscribeEvent
     public void timer(TickEvent.ClientTickEvent event) {
         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":tick事件");
@@ -228,6 +218,7 @@ public class mcEvent {
 
         }
     }
+
     private AnvilBlockEntity getTEAnvilTFC(AnvilScreen gui) throws NoSuchFieldException, IllegalAccessException {
 //        Field[] field = gui.getClass().getSuperclass().getDeclaredFields();
 //        for(Field f : field) {
@@ -264,7 +255,7 @@ public class mcEvent {
         // 其他步骤的Not_last序号对5取余后是2，Hit_Not_Last的序号是1，因此单独摘出来判断
         for (ForgeRule rule : rules) {
             // 这一步的序号对5取余后是2
-            if ((rule.ordinal() != 2 && rule.ordinal() % 5 == 2) || rule.ordinal() == 1){
+            if ((rule.ordinal() != 2 && rule.ordinal() % 5 == 2) || rule.ordinal() == 1) {
                 // 如果倒数第三步已经填充,说明倒数第三步是已经定死的步骤,不可以更改,如果能进入这里的循环并且两个位置都已经填满,说明该锻造配方无法完成
                 // 所以当倒数第三步已经填充,就将倒数第二步填充为当前步骤,否则填充最后一步
                 if (flag[2]) {
@@ -297,5 +288,26 @@ public class mcEvent {
             }
         }
         return lastOperations;
+    }
+
+    private void drawbox(int x, int y, Matrix4f matrix4f) {
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderTexture(0, res);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.enableTexture();
+
+        int frame = (int) ((Minecraft.getInstance().level.getGameTime() / ConfigFile.highlightStepCooldown.get()) % ConfigFile.totalFrames.get());
+        float uMin = (frame % ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerRow.get();
+        float vMin = (frame / ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerColumn.get();
+        float uMax = uMin + 1.0f / ConfigFile.framesPerRow.get();
+        float vMax = vMin + 1.0f / ConfigFile.framesPerColumn.get();
+        BufferBuilder $$10 = Tesselator.getInstance().getBuilder();
+        $$10.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        $$10.vertex(matrix4f, (float) (x - (ConfigFile.textureWidth.get() - 16) / 2.0), (float) (y + (ConfigFile.textureHeight.get() - 16) / 2.0 + 16), (float) 0).uv(uMin, vMax).endVertex();
+        $$10.vertex(matrix4f, (float) (x + (ConfigFile.textureWidth.get() - 16) / 2.0 + 16), (float) (y + (ConfigFile.textureHeight.get() - 16) / 2.0 + 16), (float) 0).uv(uMax, vMax).endVertex();
+        $$10.vertex(matrix4f, (float) (x + (ConfigFile.textureWidth.get() - 16) / 2.0 + 16), (float) (y - (ConfigFile.textureHeight.get() - 16) / 2.0), (float) 0).uv(uMax, vMin).endVertex();
+        $$10.vertex(matrix4f, (float) (x - (ConfigFile.textureWidth.get() - 16) / 2.0), (float) (y - (ConfigFile.textureHeight.get() - 16) / 2.0), (float) 0).uv(uMin, vMin).endVertex();
+        $$10.end();
+        BufferUploader.end($$10);
     }
 }
