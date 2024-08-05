@@ -22,6 +22,7 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -38,6 +39,8 @@ import com.eternal130.tfcaf.Util;
 import com.eternal130.tfcaf.config.ConfigFile;
 
 public class mcEvent {
+
+    static ResourceLocation res = new ResourceLocation("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
 
     public mcEvent() {
         MinecraftForge.EVENT_BUS.register(this);// 将本类中的事件处理程序注册到forge总线
@@ -132,22 +135,23 @@ public class mcEvent {
                     // 如果开启锻造提示
                     if (enableForgingTip) {
                         // 下面代码可以在指定位置渲染一个16*16的方框,具体怎么渲染可以去问gpt
-                        GlStateManager.color(0, 0, 1, 1);
-                        GlStateManager.disableTexture2D();
-                        GlStateManager.disableLighting();
-
-                        Tessellator tessellator = Tessellator.getInstance();
-                        BufferBuilder bufferBuilder = tessellator.getBuffer();
-                        bufferBuilder.begin(GL11.GL_LINE_LOOP, DefaultVertexFormats.POSITION);
-                        bufferBuilder.pos(x, y, 100).endVertex();
-                        bufferBuilder.pos(x, y + 16, 100).endVertex();
-                        bufferBuilder.pos(x + 16, y + 16, 100).endVertex();
-                        bufferBuilder.pos(x + 16, y, 100).endVertex();
-                        tessellator.draw();
-
-                        GlStateManager.enableLighting();
-                        GlStateManager.enableTexture2D();
-                        GlStateManager.color(1, 1, 1, 1);
+//                        GlStateManager.color(0, 0, 1, 1);
+//                        GlStateManager.disableTexture2D();
+//                        GlStateManager.disableLighting();
+//
+//                        Tessellator tessellator = Tessellator.getInstance();
+//                        BufferBuilder bufferBuilder = tessellator.getBuffer();
+//                        bufferBuilder.begin(GL11.GL_LINE_LOOP, DefaultVertexFormats.POSITION);
+//                        bufferBuilder.pos(x, y, 100).endVertex();
+//                        bufferBuilder.pos(x, y + 16, 100).endVertex();
+//                        bufferBuilder.pos(x + 16, y + 16, 100).endVertex();
+//                        bufferBuilder.pos(x + 16, y, 100).endVertex();
+//                        tessellator.draw();
+//
+//                        GlStateManager.enableLighting();
+//                        GlStateManager.enableTexture2D();
+//                        GlStateManager.color(1, 1, 1, 1);
+                        drawbox(x, y);
                     }
                     // 当开启自动锻造功能并且计时器为0时
                     if (enableAutoForging && TFCAutoForging.timer == 0) {
@@ -330,5 +334,45 @@ public class mcEvent {
             }
         }
         return lastOperations;
+    }
+
+    private void drawbox(int x, int y) {
+        // Load the texture from the resource file
+        Minecraft.getMinecraft()
+                .getTextureManager()
+                .bindTexture(res);
+
+        // Enable texture rendering
+        GlStateManager.enableTexture2D();
+        GlStateManager.disableLighting();
+
+        // Set the color to white to avoid tinting the texture
+        GlStateManager.color(1, 1, 1, 1);
+
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder bufferBuilder = tessellator.getBuffer();
+        bufferBuilder.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
+
+        // Calculate the texture coordinates based on the current frame
+        int frame = (int) ((Minecraft.getSystemTime() / ConfigFile.highlightStepCooldown) % ConfigFile.totalFrames); // Example
+        // frame
+        // calculation
+        float uMin = ((int) (frame % ConfigFile.framesPerRow)) / (float) ConfigFile.framesPerRow;
+        float vMin = ((int) (frame / ConfigFile.framesPerRow)) / (float) ConfigFile.framesPerColumn;
+        float uMax = uMin + 1.0f / ConfigFile.framesPerRow;
+        float vMax = vMin + 1.0f / ConfigFile.framesPerColumn;
+
+        // Define the vertices with texture coordinates
+        bufferBuilder.pos(x - (double) (ConfigFile.textureWidth - 16) / 2, y + 16 + (double) (ConfigFile.textureHeight - 16) / 2, 100).tex(uMin, vMax).endVertex();
+        bufferBuilder.pos(x + 16 + (double) (ConfigFile.textureWidth - 16) / 2, y + 16 + (double) (ConfigFile.textureHeight - 16) / 2, 100).tex(uMax, vMax).endVertex();
+        bufferBuilder.pos(x + 16 + (double) (ConfigFile.textureWidth - 16) / 2, y - (double) (ConfigFile.textureHeight - 16) / 2, 100).tex(uMax, vMin).endVertex();
+        bufferBuilder.pos(x - (double) (ConfigFile.textureWidth - 16) / 2, y - (double) (ConfigFile.textureHeight - 16) / 2, 100).tex(uMin, vMin).endVertex();
+
+        tessellator.draw();
+
+// Disable texture rendering
+        GlStateManager.enableLighting();
+        GlStateManager.disableTexture2D();
+        GlStateManager.color(1, 1, 1, 1);
     }
 }
