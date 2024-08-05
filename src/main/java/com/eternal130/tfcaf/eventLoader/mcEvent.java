@@ -8,8 +8,10 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 
@@ -34,6 +36,7 @@ import tfcquickpockets.ClientStuff;
 public class mcEvent {
 
     static boolean hasTFCQuickPockets = false;// 标志tfcquickpockets这个mod是否存在
+    static ResourceLocation res = new ResourceLocation("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
 
     public mcEvent() {
         checkPockets();
@@ -135,19 +138,20 @@ public class mcEvent {
                     // 如果开启锻造提示
                     if (enableForgingTip) {
                         // 下面代码可以在指定位置渲染一个16*16的方框,具体怎么渲染可以去问gpt
-                        GL11.glColor4f(0, 0, 1, 1);
-                        GL11.glDisable(GL11.GL_TEXTURE_2D);
-                        GL11.glDisable(GL11.GL_LIGHTING);
-                        Tessellator tessellator = Tessellator.instance;
-                        tessellator.startDrawing(GL11.GL_LINE_LOOP);
-                        tessellator.addVertex(x, y, 100);
-                        tessellator.addVertex(x, y + 16, 100);
-                        tessellator.addVertex(x + 16, y + 16, 100);
-                        tessellator.addVertex(x + 16, y, 100);
-                        tessellator.draw();
-                        GL11.glEnable(GL11.GL_LIGHTING);
-                        GL11.glEnable(GL11.GL_TEXTURE_2D);
-                        GL11.glColor4f(1, 1, 1, 1);
+                        // GL11.glColor4f(0, 0, 1, 1);
+                        // GL11.glDisable(GL11.GL_TEXTURE_2D);
+                        // GL11.glDisable(GL11.GL_LIGHTING);
+                        // Tessellator tessellator = Tessellator.instance;
+                        // tessellator.startDrawing(GL11.GL_LINE_LOOP);
+                        // tessellator.addVertex(x, y, 100);
+                        // tessellator.addVertex(x, y + 16, 100);
+                        // tessellator.addVertex(x + 16, y + 16, 100);
+                        // tessellator.addVertex(x + 16, y, 100);
+                        // tessellator.draw();
+                        // GL11.glEnable(GL11.GL_LIGHTING);
+                        // GL11.glEnable(GL11.GL_TEXTURE_2D);
+                        // GL11.glColor4f(1, 1, 1, 1);
+                        drawbox(x, y);
                     }
                     // 当开启自动锻造功能并且计时器为0时
                     if (enableAutoForging && TFCAutoForging.timer == 0) {
@@ -303,30 +307,64 @@ public class mcEvent {
                 lastOperations[i] = 4;
             }
         }
-        // 原代码，只能匹配正常顺序的锻造要求，其他非顺序但可以完成的配方不能匹配，因此上面换了另一种填充方法
-        // for (int i = 0; i < 3; i++) {
-        // switch (rules[i].Action) {
-        // case -1:
-        // case 3:
-        // lastOperations[i] = 4;
-        // break;
-        // case 0:
-        // lastOperations[i] = 3;
-        // break;
-        // case 1:
-        // lastOperations[i] = 0;
-        // break;
-        // case 4:
-        // lastOperations[i] = 5;
-        // break;
-        // case 5:
-        // lastOperations[i] = 6;
-        // break;
-        // case 6:
-        // lastOperations[i] = 7;
-        // break;
-        // }
-        // }
         return lastOperations;
+    }
+
+    private void drawbox(int x, int y) {
+        // Load the texture from the resource file
+        Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(res);
+
+        // Enable texture rendering
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_LIGHTING);
+
+        // Set the color to white to avoid tinting the texture
+        GL11.glColor4f(1, 1, 1, 1);
+
+        Tessellator tessellator = Tessellator.instance;
+        tessellator.startDrawingQuads();
+
+        // Calculate the texture coordinates based on the current frame
+        int frame = (int) ((Minecraft.getSystemTime() / ConfigFile.highlightStepCooldown) % ConfigFile.totalFrames); // Example
+                                                                                                                     // frame
+                                                                                                                     // calculation
+        float uMin = ((int) (frame % ConfigFile.framesPerRow)) / (float) ConfigFile.framesPerRow;
+        float vMin = ((int) (frame / ConfigFile.framesPerRow)) / (float) ConfigFile.framesPerColumn;
+        float uMax = uMin + 1.0f / ConfigFile.framesPerRow;
+        float vMax = vMin + 1.0f / ConfigFile.framesPerColumn;
+
+        // Define the vertices with texture coordinates
+        tessellator.addVertexWithUV(
+            x - (double) (ConfigFile.textureWidth - 16) / 2,
+            y + 16 + (double) (ConfigFile.textureHeight - 16) / 2,
+            100,
+            uMin,
+            vMax);
+        tessellator.addVertexWithUV(
+            x + 16 + (double) (ConfigFile.textureWidth - 16) / 2,
+            y + 16 + (double) (ConfigFile.textureHeight - 16) / 2,
+            100,
+            uMax,
+            vMax);
+        tessellator.addVertexWithUV(
+            x + 16 + (double) (ConfigFile.textureWidth - 16) / 2,
+            y - (double) (ConfigFile.textureHeight - 16) / 2,
+            100,
+            uMax,
+            vMin);
+        tessellator.addVertexWithUV(
+            x - (double) (ConfigFile.textureWidth - 16) / 2,
+            y - (double) (ConfigFile.textureHeight - 16) / 2,
+            100,
+            uMin,
+            vMin);
+
+        tessellator.draw();
+
+        // Disable texture rendering
+        GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
     }
 }
