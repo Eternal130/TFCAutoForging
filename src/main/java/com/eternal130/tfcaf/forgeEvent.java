@@ -6,6 +6,8 @@ import static com.eternal130.tfcaf.ConfigFile.enableForgingTip;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.*;
 import net.dries007.tfc.client.screen.AnvilScreen;
 import net.dries007.tfc.common.blockentities.AnvilBlockEntity;
 import net.dries007.tfc.common.capabilities.forge.ForgeRule;
@@ -14,7 +16,9 @@ import net.dries007.tfc.common.capabilities.forge.Forging;
 import net.dries007.tfc.common.recipes.AnvilRecipe;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
@@ -24,9 +28,12 @@ import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.joml.Matrix4f;
 
 @Mod.EventBusSubscriber(modid = "tfcaf", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class forgeEvent {
+    static ResourceLocation res = new ResourceLocation("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
+
     @SubscribeEvent
     public static void operationHighlight(ScreenEvent.Render.Post event) {
 //        LOGGER.info("Operation highlight");
@@ -129,28 +136,13 @@ public class forgeEvent {
                     // 如果开启锻造提示
                     if (enableForgingTip.get()) {
                         // 下面代码可以在指定位置渲染一个16*16的方框,具体怎么渲染可以去问gpt
-                        int color = 0xFF0000FF;
+//                        int color = 0xFF0000FF;
                         GuiGraphics guiGraphics = event.getGuiGraphics();
-                        guiGraphics.vLine(x,y,y+16,color);//左边框
-                        guiGraphics.vLine(x+15,y,y+15,color);//右边框
-                        guiGraphics.hLine(x,x+15,y,color);//上边框
-                        guiGraphics.hLine(x,x+15,y+15,color);//下边框
-//                        GlStateManager.color(0, 0, 1, 1);
-//                        GlStateManager.disableTexture2D();
-//                        GlStateManager.disableLighting();
-//
-//                        Tessellator tessellator = Tessellator.getInstance();
-//                        BufferBuilder bufferBuilder = tessellator.getBuffer();
-//                        bufferBuilder.begin(GL11.GL_LINE_LOOP, DefaultVertexFormats.POSITION);
-//                        bufferBuilder.pos(x, y, 100).endVertex();
-//                        bufferBuilder.pos(x, y + 16, 100).endVertex();
-//                        bufferBuilder.pos(x + 16, y + 16, 100).endVertex();
-//                        bufferBuilder.pos(x + 16, y, 100).endVertex();
-//                        tessellator.draw();
-//
-//                        GlStateManager.enableLighting();
-//                        GlStateManager.enableTexture2D();
-//                        GlStateManager.color(1, 1, 1, 1);
+//                        guiGraphics.vLine(x,y,y+16,color);//左边框
+//                        guiGraphics.vLine(x+15,y,y+15,color);//右边框
+//                        guiGraphics.hLine(x,x+15,y,color);//上边框
+//                        guiGraphics.hLine(x,x+15,y+15,color);//下边框
+                        drawbox(x, y, guiGraphics.pose());
                     }
                     // 当开启自动锻造功能并且计时器为0时
                     if (enableAutoForging.get() && TFCAutoForging.timer == 0) {
@@ -295,5 +287,33 @@ public class forgeEvent {
             }
         }
         return lastOperations;
+    }
+
+    private static void drawbox(int x, int y, PoseStack poseStack) {
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderTexture(0, res);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+//        RenderSystem.enableTexture();
+
+        int frame = (int) ((Minecraft.getInstance().level.getGameTime() / ConfigFile.highlightStepCooldown.get()) % ConfigFile.totalFrames.get());
+        float uMin = (frame % ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerRow.get();
+        float vMin = (frame / ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerColumn.get();
+        float uMax = uMin + 1.0f / ConfigFile.framesPerRow.get();
+        float vMax = vMin + 1.0f / ConfigFile.framesPerColumn.get();
+        Matrix4f matrix = poseStack.last().pose();
+        BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+
+        bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        bufferBuilder.vertex(matrix, (float) (x - (ConfigFile.textureWidth.get() - 16) / 2.0), (float) (y + (ConfigFile.textureHeight.get() - 16) / 2.0 + 16), 0).uv(uMin, vMax).endVertex();
+        bufferBuilder.vertex(matrix, (float) (x + (ConfigFile.textureWidth.get() - 16) / 2.0 + 16), (float) (y + (ConfigFile.textureHeight.get() - 16) / 2.0 + 16), 0).uv(uMax, vMax).endVertex();
+        bufferBuilder.vertex(matrix, (float) (x + (ConfigFile.textureWidth.get() - 16) / 2.0 + 16), (float) (y - (ConfigFile.textureHeight.get() - 16) / 2.0), 0).uv(uMax, vMin).endVertex();
+        bufferBuilder.vertex(matrix, (float) (x - (ConfigFile.textureWidth.get() - 16) / 2.0), (float) (y - (ConfigFile.textureHeight.get() - 16) / 2.0), 0).uv(uMin, vMin).endVertex();
+
+        BufferUploader.drawWithShader(bufferBuilder.end());
+
+        RenderSystem.disableBlend();
     }
 }
