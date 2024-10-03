@@ -94,6 +94,7 @@ public class Util {
         operationsTfc.put(4, 5);
         operationsTfc.put(5, 6);
         operationsTfc.put(6, 7);
+        operationsTfc.put(-1, 3);
         buttonMapping.put(0, 3);
         buttonMapping.put(1, 2);
         buttonMapping.put(2, 1);
