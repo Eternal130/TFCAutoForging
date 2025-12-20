@@ -2,18 +2,19 @@ package com.eternal130.tfcaf;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.KeyMapping;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import org.slf4j.Logger;
 
-// The value here should match an entry in the META-INF/mods.toml file
+// The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(TFCAutoForging.MODID)
 public class TFCAutoForging
 {
@@ -26,18 +27,16 @@ public class TFCAutoForging
     public static KeyMapping switchForgingTip;
     public static int timer = 0;
 
-    public TFCAutoForging()
+    public TFCAutoForging(IEventBus modEventBus, ModContainer modContainer)
     {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::setup);
 
         // Register ourselves for server and other game events we are interested in
-        MinecraftForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(this);
 
         // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ConfigFile.CONFIG);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ConfigFile.CONFIG);
 //        new forgeEvent();
     }
 

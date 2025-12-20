@@ -1,9 +1,10 @@
 package com.eternal130.tfcaf;
 
-import net.dries007.tfc.common.capabilities.forge.ForgeSteps;
+import net.dries007.tfc.common.component.forge.ForgeStep;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Util {
@@ -18,7 +19,7 @@ public class Util {
     // 下面这个map用于将最后三步的步骤重映射到operations上
     public static final Map<Integer, Integer> stepTFC = new HashMap<>();
 
-    public static int nextOperationOffset(int Difference, int[] lastRules, ForgeSteps itemRules) {
+    public static int nextOperationOffset(int Difference, int[] lastRules, List<ForgeStep> itemRules) {
         /**
          * 计算下一步步骤.
          *
@@ -33,13 +34,13 @@ public class Util {
         // 如果偏移差值+要求倒三步+要求倒二步==0,并且当前倒一步是要求倒二步,当前倒二步是要求倒三步
         // 这意味着在满足减去偏移值的基础上,又完成了要求的倒二和倒三,因此下一步就是倒一
         if (Difference + operations[lastRules[2]] + operations[lastRules[1]] == 0
-                && buttonMapping.get(itemRules.last().ordinal()) == lastRules[1]
-                && buttonMapping.get(itemRules.secondLast().ordinal()) == lastRules[2]) {
+                && buttonMapping.get(itemRules.getLast().ordinal()) == lastRules[1]
+                && buttonMapping.get(itemRules.get(itemRules.size()-2).ordinal()) == lastRules[2]) {
 //             TFCAutoForging.logger.info(TFCAutoForging.MODID + ":完成前两步");
             return lastRules[0];
             // 如果偏移差值+要求倒三步==0,并且当前倒一是要求倒三步
             // 这意味着满足减去偏移值的基础上,又完成了要求的倒数第三步,因此下一步是倒二
-        } else if (Difference + operations[lastRules[2]] == 0 && buttonMapping.get(itemRules.last().ordinal()) == lastRules[2]) {
+        } else if (Difference + operations[lastRules[2]] == 0 && buttonMapping.get(itemRules.getLast().ordinal()) == lastRules[2]) {
 //             TFCAutoForging.logger.info(TFCAutoForging.MODID + ":完成一步");
             return lastRules[1];
             // 如果偏移差值为0,意味着已经完成锻造要求外的其他步骤,因此下一步是锻造要求的倒数第三步

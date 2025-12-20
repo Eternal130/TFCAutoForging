@@ -1,23 +1,23 @@
 package com.eternal130.tfcaf;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class ConfigFile {
-    public static final ForgeConfigSpec.BooleanValue enableAutoForging;
-    public static final ForgeConfigSpec.BooleanValue enableForgingTip;
-    public static final ForgeConfigSpec.IntValue autoForgingCooldown;
-    public static final ForgeConfigSpec.IntValue highlightStepCooldown;// 高亮提示单帧持续时间(ms)
-    public static final ForgeConfigSpec.IntValue totalFrames;// 高亮提示动画总帧数
-    public static final ForgeConfigSpec.IntValue framesPerRow;// 材质每行帧数
-    public static final ForgeConfigSpec.IntValue framesPerColumn;// 材质每列帧数
-    public static final ForgeConfigSpec.IntValue textureWidth;// 材质宽度
-    public static final ForgeConfigSpec.IntValue textureHeight;// 材质高度
-    public static ForgeConfigSpec CONFIG;
+    public static final ModConfigSpec.BooleanValue enableAutoForging;
+    public static final ModConfigSpec.BooleanValue enableForgingTip;
+    public static final ModConfigSpec.IntValue autoForgingCooldown;
+    public static final ModConfigSpec.IntValue highlightStepCooldown;// 高亮提示单帧持续时间(ms)
+    public static final ModConfigSpec.IntValue totalFrames;// 高亮提示动画总帧数
+    public static final ModConfigSpec.IntValue framesPerRow;// 材质每行帧数
+    public static final ModConfigSpec.IntValue framesPerColumn;// 材质每列帧数
+    public static final ModConfigSpec.IntValue textureWidth;// 材质宽度
+    public static final ModConfigSpec.IntValue textureHeight;// 材质高度
+    public static ModConfigSpec CONFIG;
 
     public ConfigFile() {}
 
     static {
-        ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
         BUILDER.comment("General settings").push("general");
         enableAutoForging = BUILDER.comment("Is it fully automatic forging?").define("enableAutoForging", true);
         enableForgingTip = BUILDER.comment("Is the next recommended step highlighted?").define("enableDebug", true);
