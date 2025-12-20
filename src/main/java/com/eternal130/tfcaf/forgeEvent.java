@@ -14,6 +14,8 @@ import net.dries007.tfc.common.blockentities.AnvilBlockEntity;
 import net.dries007.tfc.common.component.forge.ForgeRule;
 import net.dries007.tfc.common.component.forge.ForgeStep;
 import net.dries007.tfc.common.component.forge.Forging;
+import net.dries007.tfc.common.component.heat.HeatCapability;
+import net.dries007.tfc.common.component.heat.IHeat;
 import net.dries007.tfc.common.recipes.AnvilRecipe;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,6 +24,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -129,6 +132,12 @@ public class forgeEvent {
                     }
                     // 当开启自动锻造功能并且计时器为0时
                     if (enableAutoForging.get() && TFCAutoForging.timer == 0) {
+                        ItemStack stack = anvilTE.getInventory().getStackInSlot(0);
+                        IHeat heat = HeatCapability.get(stack);
+                        // 温度不够时不进行锻造
+                        if (heat != null && !heat.canWork()) {
+                            return;
+                        }
                         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = ConfigFile.autoForgingCooldown.get();
