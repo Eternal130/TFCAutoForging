@@ -13,6 +13,8 @@ import net.dries007.tfc.common.blockentities.AnvilBlockEntity;
 import net.dries007.tfc.common.capabilities.forge.ForgeRule;
 import net.dries007.tfc.common.capabilities.forge.ForgeSteps;
 import net.dries007.tfc.common.capabilities.forge.Forging;
+import net.dries007.tfc.common.capabilities.heat.HeatCapability;
+import net.dries007.tfc.common.capabilities.heat.IHeat;
 import net.dries007.tfc.common.recipes.AnvilRecipe;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -20,6 +22,7 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
@@ -43,14 +46,10 @@ public class forgeEvent {
         // TFCAutoForging.LOG.info(event.gui.toString());
         try {
             if (event.getScreen() instanceof AnvilScreen) {
-//                Field[] fields = event.getGui().getClass().getSuperclass().getSuperclass().getSuperclass().getSuperclass().getDeclaredFields();
-//                for(Field field : fields) {
-//                    TFCAutoForging.logger.info("Field: {} ,Type: {}", field.getName(), field.getType());
-//                }
                 // 检测当前gui是否是铁砧gui或者是tfcquickpocket替换后的铁砧gui
                 AnvilBlockEntity anvilTE = getTEAnvilTFC((AnvilScreen) event.getScreen());
-                Forging forging = ((AnvilBlockEntity)anvilTE).getMainInputForging();
-                Level level = ((AnvilBlockEntity)anvilTE).getLevel();
+                Forging forging = anvilTE.getMainInputForging();
+                Level level = anvilTE.getLevel();
                 if (enableAutoForging.get() || enableForgingTip.get()) {
                     // 当锻造提示功能和自动锻造功能有一个开启时就计算下一步锻造步骤
                     // 当前锻造数值,此值在选择任意锻造操作时改变
@@ -73,13 +72,6 @@ public class forgeEvent {
                     // 用于存储锻造要求，其中的值为Util类中operations的索引
                     int[] lastOperations = getRules(AnvilRecipe.getRules());
                     for (int i = 0; i < 3; i++) {
-//                        try {
-//                            lastOperations[i] = Util.operationsTfc.get(AnvilRecipe.getRules()[i].ordinal());
-//                        } catch (Exception e) {
-//                            //这里的异常是索引越界异常,因为锻造需求相比于1.7,没有any,长度可以小于3
-//                            lastOperations[i] = 4;
-//                        }
-
                         ruleOffset += Util.operations[lastOperations[i]];
                     }
                     // GuiAnvil中drawItemRulesImages方法绘制最后三步步骤,drawRulesImages方法绘制锻造要求
@@ -136,52 +128,22 @@ public class forgeEvent {
                     // 如果开启锻造提示
                     if (enableForgingTip.get()) {
                         // 下面代码可以在指定位置渲染一个16*16的方框,具体怎么渲染可以去问gpt
-//                        int color = 0xFF0000FF;
                         GuiGraphics guiGraphics = event.getGuiGraphics();
-//                        guiGraphics.vLine(x,y,y+16,color);//左边框
-//                        guiGraphics.vLine(x+15,y,y+15,color);//右边框
-//                        guiGraphics.hLine(x,x+15,y,color);//上边框
-//                        guiGraphics.hLine(x,x+15,y+15,color);//下边框
                         drawbox(x, y, guiGraphics.pose());
                     }
                     // 当开启自动锻造功能并且计时器为0时
                     if (enableAutoForging.get() && TFCAutoForging.timer == 0) {
+                        ItemStack stack = getInventory(anvilTE).getStackInSlot(0);
+                        IHeat heat = HeatCapability.get(stack);
+                        // 温度不够时不进行锻造
+                        if (heat != null && !heat.canWork()) {
+                            return;
+                        }
                         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = ConfigFile.autoForgingCooldown.get();
-                        //1.18居然能直接调用鼠标点击方法,下面那一大堆就不需要了
                         event.getScreen().mouseClicked(x+8,y+8,0);
-                        // 获取按钮列表,触发按按钮事件需要这个参数
-//                        List<GuiButton> buttonlist = getButtonList((GuiContainerTFC) event.getGui());
-                        // TFCAutoForging.LOG.info("待点按钮id {},待点按钮索引 {},总按钮数 {}",
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)),Util.buttonMapping.get(offsetNextOperation)
-                        // , buttonlist);
-                        // GuiScreenEvent.ActionPerformedEvent.Pre eventt = new
-                        // GuiScreenEvent.ActionPerformedEvent.Pre(event.gui,
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)), buttonlist);
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)).func_146113_a(Minecraft.getMinecraft().getSoundHandler());
-                        // if (event.gui.equals(Minecraft.getMinecraft().currentScreen))
-                        // MinecraftForge.EVENT_BUS.post(new GuiScreenEvent.ActionPerformedEvent.Post(event.gui,
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)), buttonlist));
 
-                        // MinecraftForge.EVENT_BUS.post(new GuiScreenEvent.ActionPerformedEvent.Pre(event.gui,
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)), buttonlist));
-
-                        // 因为这个方法是protected权限,因此使用反射来调用,该方法用于处理按钮点击,下面的name为该方法的混淆名,该名被mcp翻译了,反编译代码中看不到正常名
-                        // 使用getDeclaredMethods()方法可以获取所有方法的混淆名,顺序和反编译代码中的相同,因此很好找
-//                        Method actionPerformed = event.getGui().getClass()
-//                                .getDeclaredMethod("func_146284_a", GuiButton.class);
-//                        // 设置权限为public
-//                        actionPerformed.setAccessible(true);
-//                        // 调用方法,因为按钮索引和用于计算的operations索引都不同,所以经过映射后填入
-//                        actionPerformed
-//                                .invoke(event.getGui(), buttonlist.get(Util.buttonMapping.get(offsetNextOperation)));
-
-                        // Method[] methods = event.gui.getClass().getDeclaredMethods();
-                        // for(Method method : methods) {
-                        // TFCAutoForging.LOG.info("{}:{}", method.getName(),
-                        // Arrays.toString(method.getParameterTypes()));
-                        // }
                     }
                     // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":绘制成功");
                 }
@@ -220,13 +182,14 @@ public class forgeEvent {
         }
     }
     private static AnvilBlockEntity getTEAnvilTFC(AnvilScreen gui) throws NoSuchFieldException, IllegalAccessException {
-//        Field[] field = gui.getClass().getSuperclass().getDeclaredFields();
-//        for(Field f : field) {
-//            TFCAutoForging.LOGGER.info("Found field: {},type:{}", f.getName(), f.getType());
-//        }
         Field fields = gui.getClass().getSuperclass().getDeclaredField("blockEntity");
         fields.setAccessible(true);
         return (AnvilBlockEntity) fields.get(gui);
+    }
+    private static AnvilBlockEntity.AnvilInventory getInventory(AnvilBlockEntity te)throws NoSuchFieldException, IllegalAccessException{
+        Field fields = te.getClass().getSuperclass().getDeclaredField("inventory");
+        fields.setAccessible(true);
+        return (AnvilBlockEntity.AnvilInventory) fields.get(te);
     }
     private static int[] getRules(ForgeRule[] rules) {
         // 相对于1.7版本,没有any类型,每种步骤也只有五种位置,少了LastTwo这种类型,因此少遍历一次
@@ -295,7 +258,6 @@ public class forgeEvent {
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-//        RenderSystem.enableTexture();
 
         int frame = (int) ((Minecraft.getInstance().level.getGameTime() / ConfigFile.highlightStepCooldown.get()) % ConfigFile.totalFrames.get());
         float uMin = (frame % ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerRow.get();
