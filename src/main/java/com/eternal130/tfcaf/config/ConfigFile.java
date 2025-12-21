@@ -24,11 +24,8 @@ public class ConfigFile {
     }
 
     public static void load() {
-        enableAutoForging = config.getBoolean(
-            "enableAutoForging",
-            Configuration.CATEGORY_GENERAL,
-            true,
-            "Is it fully automatic forging?");
+        enableAutoForging = config
+            .getBoolean("enableAutoForging", Configuration.CATEGORY_GENERAL, true, "Is it fully automatic forging?");
         enableForgingTip = config.getBoolean(
             "enableForgingTip",
             Configuration.CATEGORY_GENERAL,

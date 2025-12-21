@@ -138,23 +138,15 @@ public class mcEvent {
                     // 如果开启锻造提示
                     if (enableForgingTip) {
                         // 下面代码可以在指定位置渲染一个16*16的方框,具体怎么渲染可以去问gpt
-                        // GL11.glColor4f(0, 0, 1, 1);
-                        // GL11.glDisable(GL11.GL_TEXTURE_2D);
-                        // GL11.glDisable(GL11.GL_LIGHTING);
-                        // Tessellator tessellator = Tessellator.instance;
-                        // tessellator.startDrawing(GL11.GL_LINE_LOOP);
-                        // tessellator.addVertex(x, y, 100);
-                        // tessellator.addVertex(x, y + 16, 100);
-                        // tessellator.addVertex(x + 16, y + 16, 100);
-                        // tessellator.addVertex(x + 16, y, 100);
-                        // tessellator.draw();
-                        // GL11.glEnable(GL11.GL_LIGHTING);
-                        // GL11.glEnable(GL11.GL_TEXTURE_2D);
-                        // GL11.glColor4f(1, 1, 1, 1);
                         drawbox(x, y);
                     }
                     // 当开启自动锻造功能并且计时器为0时
                     if (enableAutoForging && TFCAutoForging.timer == 0) {
+                        // 不可锻造时不进行锻造
+                        if (!(anvilTE.isTemperatureWorkable(1) && anvilTE.anvilItemStacks[0] != null
+                            && (anvilTE.anvilItemStacks[1].getItemDamage() == 0 || anvilTE.anvilItemStacks[1].getItem()
+                                .getHasSubtypes())
+                            && anvilTE.getAnvilType() >= anvilTE.craftingReq)) return;
                         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = (short) ConfigFile.autoForgingCooldown;
@@ -163,17 +155,6 @@ public class mcEvent {
                         // TFCAutoForging.LOG.info("待点按钮id {},待点按钮索引 {},总按钮数 {}",
                         // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)),Util.buttonMapping.get(offsetNextOperation)
                         // , buttonlist);
-                        // GuiScreenEvent.ActionPerformedEvent.Pre eventt = new
-                        // GuiScreenEvent.ActionPerformedEvent.Pre(event.gui,
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)), buttonlist);
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)).func_146113_a(Minecraft.getMinecraft().getSoundHandler());
-                        // if (event.gui.equals(Minecraft.getMinecraft().currentScreen))
-                        // MinecraftForge.EVENT_BUS.post(new GuiScreenEvent.ActionPerformedEvent.Post(event.gui,
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)), buttonlist));
-
-                        // MinecraftForge.EVENT_BUS.post(new GuiScreenEvent.ActionPerformedEvent.Pre(event.gui,
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)), buttonlist));
-
                         // 因为这个方法是protected权限,因此使用反射来调用,该方法用于处理按钮点击,下面的name为该方法的混淆名,该名被mcp翻译了,反编译代码中看不到正常名
                         // 使用getDeclaredMethods()方法可以获取所有方法的混淆名,顺序和反编译代码中的相同,因此很好找
                         Method actionPerformed = event.gui.getClass()
@@ -183,12 +164,6 @@ public class mcEvent {
                         // 调用方法,因为按钮索引和锻造步骤索引以及用于计算的operations索引都不同,所以前两个都经过映射后填入
                         actionPerformed
                             .invoke(event.gui, buttonlist.get(7 - Util.buttonMapping.get(offsetNextOperation)));
-
-                        // Method[] methods = event.gui.getClass().getDeclaredMethods();
-                        // for(Method method : methods) {
-                        // TFCAutoForging.LOG.info("{}:{}", method.getName(),
-                        // Arrays.toString(method.getParameterTypes()));
-                        // }
                     }
                     // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":绘制成功");
                 }
@@ -225,10 +200,6 @@ public class mcEvent {
         /**
          * 使用反射获取按钮列表,名字同样被混淆,使用上面那个方法就能轻松获得混淆名.
          */
-        // Field[] fields = gui.getClass().getSuperclass().getSuperclass().getSuperclass().getDeclaredFields();
-        // for(Field field : fields) {
-        // TFCAutoForging.LOG.info("Field: {} ,Type: {}", field.getName(), field.getType());
-        // }
         Field field = gui.getClass()
             .getSuperclass()
             .getSuperclass()
