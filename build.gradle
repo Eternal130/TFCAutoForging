@@ -3,3 +3,8 @@
 plugins {
     id 'com.gtnewhorizons.gtnhconvention'
 }
+version = 1.5
+
+base {
+    archivesName = modId + "-tfc" + "-" + minecraftVersion
+}
