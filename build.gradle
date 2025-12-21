@@ -18,7 +18,7 @@ apply plugin: 'maven-publish'
 
 version = "${mc_version}-${mod_version}"
 group = 'com.eternal130.tfcaf' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = 'tfcaf'
+archivesBaseName = 'tfcaf' + "-tfctng"
 
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
 
