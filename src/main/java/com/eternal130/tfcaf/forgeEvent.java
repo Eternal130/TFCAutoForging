@@ -141,7 +141,6 @@ public class forgeEvent {
                         drawbox(x, y, guiGraphics.pose());
                     }
                     // 当开启自动锻造功能并且计时器为0时
-                    // --- 核心修改：双重逻辑判定 ---
                     // 只有当计时器归零 且 服务器已响应（不在等待状态）时才执行点击
                     if (enableAutoForging.get() && TFCAutoForging.timer == 0 && !TFCAutoForging.isWaitingForServer) {
                         ItemStack stack = getInventory(anvilTE).getStackInSlot(0);
