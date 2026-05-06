@@ -38,6 +38,19 @@ public class forgeEvent {
     static ResourceLocation res = new ResourceLocation("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
 
     @SubscribeEvent
+    public static void onScreenClosed(ScreenEvent.Closing event) {
+        // 检查关闭的是否是铁砧界面
+        if (event.getScreen() instanceof AnvilScreen) {
+            // 重置状态，确保下次打开时逻辑正常
+            TFCAutoForging.isWaitingForServer = false;
+            // 建议同时将上一次记录的值重置为一个无效值，比如 -1
+            TFCAutoForging.lastWorkValue = -1; 
+            
+            // System.out.println("Anvil GUI closed, state reset.");
+        }
+    }
+
+    @SubscribeEvent
     public static void operationHighlight(ScreenEvent.Render.Post event) {
 //        LOGGER.info("Operation highlight");
         /*
