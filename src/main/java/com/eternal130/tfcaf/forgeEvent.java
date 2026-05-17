@@ -111,35 +111,35 @@ public class forgeEvent {
                     switch (offsetNextOperation) {
                         case 0:
                             x += 71;
-                            y += 68;
+                            y += 74;
                             break;
                         case 1:
                             x += 53;
-                            y += 68;
+                            y += 74;
                             break;
                         case 2:
                             x += 71;
-                            y += 50;
+                            y += 56;
                             break;
                         case 3:
                             x += 53;
-                            y += 50;
+                            y += 56;
                             break;
                         case 4:
                             x += 89;
-                            y += 50;
+                            y += 56;
                             break;
                         case 5:
                             x += 107;
-                            y += 50;
+                            y += 56;
                             break;
                         case 6:
                             x += 89;
-                            y += 68;
+                            y += 74;
                             break;
                         case 7:
                             x += 107;
-                            y += 68;
+                            y += 74;
                             break;
                         default:
                             return;
