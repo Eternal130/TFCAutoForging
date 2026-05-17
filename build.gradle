@@ -4,7 +4,7 @@ plugins {
     id 'com.gtnewhorizons.gtnhconvention'
 }
 
-version = 1.5
+version = 1.6
 
 base {
     archivesName = modId + "-tfcplus" + "-" + minecraftVersion
