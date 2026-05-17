@@ -21,7 +21,7 @@ public class ConfigFile {
         BUILDER.comment("General settings").push("general");
         enableAutoForging = BUILDER.comment("Is it fully automatic forging?").define("enableAutoForging", true);
         enableForgingTip = BUILDER.comment("Is the next recommended step highlighted?").define("enableDebug", true);
-        autoForgingCooldown = BUILDER.comment("cooldown of each automatic forging step(tick)").defineInRange("autoForgingCooldown", 20, 1, 200);
+        autoForgingCooldown = BUILDER.comment("cooldown of each automatic forging step(tick)").defineInRange("autoForgingCooldown", 1, 1, 200);
         highlightStepCooldown = BUILDER.comment("The duration of each frame of the highlight step(tick)").defineInRange("highlightStepCooldown", 2, 1, 1000);
         totalFrames = BUILDER.comment("Total number of frames in the highlight step animation").defineInRange("totalFrames", 16, 1, 100);
         framesPerRow = BUILDER.comment("Number of frames per row in the texture").defineInRange("framesPerRow", 4, 1, 10);

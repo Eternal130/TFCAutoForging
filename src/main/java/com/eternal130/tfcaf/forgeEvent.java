@@ -38,6 +38,17 @@ public class forgeEvent {
     static ResourceLocation res = ResourceLocation.fromNamespaceAndPath("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
 
     @SubscribeEvent
+    public static void onScreenClosed(ScreenEvent.Closing event) {
+        // 检查关闭的是否是铁砧界面
+        if (event.getScreen() instanceof AnvilScreen) {
+            // 重置状态，确保下次打开时逻辑正常
+            TFCAutoForging.isWaitingForServer = false;
+            // 建议同时将上一次记录的值重置为一个无效值，比如 -1
+            TFCAutoForging.lastWorkValue = -1; 
+        }
+    }
+
+    @SubscribeEvent
     public static void operationHighlight(ScreenEvent.Render.Post event) {
 //        LOGGER.info("Operation highlight");
         /*
@@ -57,6 +68,15 @@ public class forgeEvent {
                     }
                     int currentPoint = forging.work();
                     // 目标锻造数值,此值由世界种子和锻造配方唯一指定,当当前锻造数值等于目标锻造数值,并且最后三步满足锻造要求时,锻造完成
+
+                    // 服务器响应检测
+                    if (TFCAutoForging.isWaitingForServer) {
+                        // 如果当前数值与上次记录的点击前数值不同，说明服务器已更新进度
+                        if (currentPoint != TFCAutoForging.lastWorkValue) {
+                            TFCAutoForging.isWaitingForServer = false;
+                        }
+                    }
+
                     int targetPoint = forging.target();
                     // 如果目标锻造数值为0,则退出程序,意味着当前并没有选择配方,无需继续计算
                     if (targetPoint == 0) {
@@ -131,13 +151,18 @@ public class forgeEvent {
                         drawbox(x, y, guiGraphics.pose());
                     }
                     // 当开启自动锻造功能并且计时器为0时
-                    if (enableAutoForging.get() && TFCAutoForging.timer == 0) {
+                    // 只有当计时器归零 且 服务器已响应（不在等待状态）时才执行点击
+                    if (enableAutoForging.get() && TFCAutoForging.timer == 0 && !TFCAutoForging.isWaitingForServer) {
                         ItemStack stack = anvilTE.getInventory().getStackInSlot(0);
                         IHeat heat = HeatCapability.get(stack);
                         // 温度不够时不进行锻造
                         if (heat != null && !heat.canWork()) {
                             return;
                         }
+                        // 记录当前数值，并标记为"正在等待服务器响应"
+                        TFCAutoForging.lastWorkValue = currentPoint;
+                        TFCAutoForging.isWaitingForServer = true;
+
                         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = ConfigFile.autoForgingCooldown.get();
@@ -165,6 +190,8 @@ public class forgeEvent {
         // 快捷键检测
         if (TFCAutoForging.switchAutoForging.consumeClick()) {
             enableAutoForging.set(!enableAutoForging.get());
+            // 切换时重置状态，防止卡死
+            TFCAutoForging.isWaitingForServer = false;
             ConfigFile.CONFIG.save();
             Player player = Minecraft.getInstance().player;
             // 在游戏中提示当前值

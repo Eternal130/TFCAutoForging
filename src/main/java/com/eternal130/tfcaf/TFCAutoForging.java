@@ -26,6 +26,9 @@ public class TFCAutoForging
     public static KeyMapping switchForgingTip;
     public static int timer = 0;
 
+    public static int lastWorkValue = -1;                // 记录点击瞬间的数值
+    public static boolean isWaitingForServer = false;    // 是否正在等待服务器响应
+
     public TFCAutoForging(IEventBus modEventBus, ModContainer modContainer)
     {
         // Register the commonSetup method for modloading
