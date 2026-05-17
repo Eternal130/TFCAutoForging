@@ -25,6 +25,8 @@ public class TFCAutoForging {
     public static final String MODNAME = "TFC Auto Forging";
     public static final Logger LOG = LogManager.getLogger(MODID);
     public static short timer = 0;
+    public static int lastWorkValue = -1; // 记录点击瞬间的数值
+    public static boolean isWaitingForServer = false; // 是否正在等待服务器响应
     // 下面的proxy会在调用时自行判断在服务器还是客户端运行
     @SidedProxy(
         clientSide = "com.eternal130.tfcaf.proxy.ClientProxy",

@@ -49,6 +49,8 @@ public class fmlEvent {
                 Configuration.CATEGORY_GENERAL,
                 ConfigFile.enableAutoForging,
                 "Is it fully automatic forging?");
+            // 切换时重置状态，防止卡死
+            TFCAutoForging.isWaitingForServer = false;
             EntityPlayer player = Minecraft.getMinecraft().thePlayer;
             // 在游戏中提示当前值
             player.addChatMessage(

@@ -37,6 +37,7 @@ public class mcEvent {
 
     static boolean hasTFCQuickPockets = false;// 标志tfcquickpockets这个mod是否存在
     static ResourceLocation res = new ResourceLocation("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
+    static boolean wasInAnvilGui = false; // 跟踪上一次是否在铁砧GUI中
 
     public mcEvent() {
         checkPockets();
@@ -51,8 +52,15 @@ public class mcEvent {
          */
         // TFCAutoForging.LOG.info(event.gui.toString());
         try {
-            if (event.gui instanceof GuiAnvil
-                || (hasTFCQuickPockets && event.gui instanceof ClientStuff.AnvilGUIWithFastBagAccess)) {
+            boolean isInAnvilGui = event.gui instanceof GuiAnvil
+                || (hasTFCQuickPockets && event.gui instanceof ClientStuff.AnvilGUIWithFastBagAccess);
+            // 检测GUI关闭：上一次在铁砧GUI中，当前不在，重置状态
+            if (wasInAnvilGui && !isInAnvilGui) {
+                TFCAutoForging.isWaitingForServer = false;
+                TFCAutoForging.lastWorkValue = -1;
+            }
+            wasInAnvilGui = isInAnvilGui;
+            if (isInAnvilGui) {
                 // 检测当前gui是否是铁砧gui或者是tfcquickpocket替换后的铁砧gui
                 TEAnvil anvilTE = getAnvilTE((GuiContainerTFC) event.gui);
                 if (enableAutoForging || enableForgingTip) {
@@ -60,6 +68,15 @@ public class mcEvent {
                     // 当前锻造数值,此值在选择任意锻造操作时改变
                     int currentPoint = anvilTE.getItemCraftingValue();
                     // 目标锻造数值,此值由世界种子和锻造配方唯一指定,当当前锻造数值等于目标锻造数值,并且最后三步满足锻造要求时,锻造完成
+
+                    // 服务器响应检测
+                    if (TFCAutoForging.isWaitingForServer) {
+                        // 如果当前数值与上次记录的点击前数值不同，说明服务器已更新进度
+                        if (currentPoint != TFCAutoForging.lastWorkValue) {
+                            TFCAutoForging.isWaitingForServer = false;
+                        }
+                    }
+
                     int targetPoint = anvilTE.getCraftingValue();
                     // 如果目标锻造数值为0,则退出程序,意味着当前并没有选择配方,无需继续计算
                     if (targetPoint == 0) {
@@ -140,13 +157,16 @@ public class mcEvent {
                         // 下面代码可以在指定位置渲染一个16*16的方框,具体怎么渲染可以去问gpt
                         drawbox(x, y);
                     }
-                    // 当开启自动锻造功能并且计时器为0时
-                    if (enableAutoForging && TFCAutoForging.timer == 0) {
+                    // 当开启自动锻造功能并且计时器为0时,且服务器已响应（不在等待状态）时才执行点击
+                    if (enableAutoForging && TFCAutoForging.timer == 0 && !TFCAutoForging.isWaitingForServer) {
                         // 不可锻造时不进行锻造
                         if (!(anvilTE.isTemperatureWorkable(1) && anvilTE.anvilItemStacks[0] != null
                             && (anvilTE.anvilItemStacks[1].getItemDamage() == 0 || anvilTE.anvilItemStacks[1].getItem()
                                 .getHasSubtypes())
                             && anvilTE.getAnvilType() >= anvilTE.craftingReq)) return;
+                        // 记录当前数值，并标记为"正在等待服务器响应"
+                        TFCAutoForging.lastWorkValue = currentPoint;
+                        TFCAutoForging.isWaitingForServer = true;
                         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = (short) ConfigFile.autoForgingCooldown;
