@@ -131,7 +131,7 @@ jobs:
             case "$base" in
               *-sources|*-dev) continue ;;
             esac
-            cp "$f" "dist/${base}-${{ matrix.branch }}.jar"
+            cp "$f" "dist/"
           done
           if [ -z "$(ls -A dist)" ]; then
             echo "::error::No release jar found in build/libs"
