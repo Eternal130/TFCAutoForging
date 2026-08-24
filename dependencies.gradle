@@ -35,5 +35,5 @@
  */
 dependencies {
     runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.8.98-GTNH:dev")
-    compileOnly files("libs/1.7.10-TerraFirmaCraft-0.79.30.925.jar")
+    devOnlyNonPublishable(rfg.deobf("curse.maven:terrafirmacraft-302973:2627990"))
 }
