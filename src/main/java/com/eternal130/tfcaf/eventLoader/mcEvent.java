@@ -140,7 +140,7 @@ public class mcEvent {
                         // 不可锻造时不进行锻造
                         if (!(anvilTE.isTemperatureWorkable(1) && anvilTE.anvilItemStacks[0] != null
                             && (anvilTE.anvilItemStacks[1].getItemDamage() == 0 || anvilTE.anvilItemStacks[1].getItem()
-                            .getHasSubtypes())
+                                .getHasSubtypes())
                             && anvilTE.getAnvilType() >= anvilTE.craftingReq)) return;
                         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
