@@ -1,0 +1,152 @@
+name: Multi-branch Release
+
+# 本文件仅存在于 TFCPlus1.7.10 分支。
+# tag 必须打在本分支的 commit 上（GitHub 从 tag 指向的 commit 读取 workflow）。
+# 触发后按 matrix 检出各分支的远端 HEAD 构建，产物统一汇总到同一个 Release。
+# 手动触发（workflow_dispatch）可勾选部分分支，用于补发/单发。
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      build_tfcplus_1710:
+        description: 'Build TFCPlus1.7.10 (GTNH 1.7.10)'
+        type: boolean
+        default: true
+      build_tfc_1710:
+        description: 'Build TFC1.7.10 (TFC Classic 1.7.10)'
+        type: boolean
+        default: true
+      build_tng_112:
+        description: 'Build TFCTNG1.12'
+        type: boolean
+        default: true
+      build_tng_118:
+        description: 'Build TFCTNG1.18'
+        type: boolean
+        default: true
+      build_tng_120:
+        description: 'Build TFCTNG1.20'
+        type: boolean
+        default: true
+      build_tng_121:
+        description: 'Build TFCTNG1.21'
+        type: boolean
+        default: true
+      tag_name:
+        description: 'Release tag (required for manual runs, e.g. v1.7)'
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # 根据 inputs 生成 matrix：
+  # - tag 触发（push tag）：inputs.* 均为空 → 全部构建
+  # - 手动触发：按勾选构建
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+      release_tag: ${{ steps.tag.outputs.release_tag }}
+    steps:
+      - name: Resolve release tag
+        id: tag
+        run: |
+          TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}"
+          if [ -z "$TAG" ]; then
+            echo "::error::Manual run requires tag_name input"
+            exit 1
+          fi
+          echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build matrix from inputs
+        id: set
+        env:
+          B_1: ${{ github.event_name != 'workflow_dispatch' || inputs.build_tfcplus_1710 }}
+          B_2: ${{ github.event_name != 'workflow_dispatch' || inputs.build_tfc_1710 }}
+          B_3: ${{ github.event_name != 'workflow_dispatch' || inputs.build_tng_112 }}
+          B_4: ${{ github.event_name != 'workflow_dispatch' || inputs.build_tng_118 }}
+          B_5: ${{ github.event_name != 'workflow_dispatch' || inputs.build_tng_120 }}
+          B_6: ${{ github.event_name != 'workflow_dispatch' || inputs.build_tng_121 }}
+        run: |
+          entries=""
+          add() { entries="${entries}{\"branch\":\"$1\",\"java\":$2},"; }
+          [[ "$B_1" == "true" ]] && add TFCPlus1.7.10  17
+          [[ "$B_2" == "true" ]] && add TFC1.7.10       17
+          [[ "$B_3" == "true" ]] && add TFCTNG1.12      17
+          [[ "$B_4" == "true" ]] && add TFCTNG1.18      17
+          [[ "$B_5" == "true" ]] && add TFCTNG1.20      21
+          [[ "$B_6" == "true" ]] && add TFCTNG1.21      21
+          if [ -z "$entries" ]; then
+            echo "::error::No branch selected"
+            exit 1
+          fi
+          echo "matrix={\"include\":[${entries%,}]}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    env:
+      VERSION: ${{ needs.prepare.outputs.release_tag }}
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew build -x test --stacktrace
+
+      - name: Collect jars
+        run: |
+          mkdir -p dist
+          shopt -s nullglob
+          for f in build/libs/*.jar; do
+            base="$(basename "$f" .jar)"
+            # 跳过 sources / dev 变体，只发布正式 jar
+            case "$base" in
+              *-sources|*-dev) continue ;;
+            esac
+            cp "$f" "dist/${base}-${{ matrix.branch }}.jar"
+          done
+          if [ -z "$(ls -A dist)" ]; then
+            echo "::error::No release jar found in build/libs"
+            exit 1
+          fi
+          ls -l dist/
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.release_tag }}
+          files: dist/*.jar
+          # 已存在则追加文件，不覆盖其他分支的产物
+          make_latest: true
+
+  all-done:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All selected branches built and uploaded to release ${{ needs.prepare.outputs.release_tag }}"

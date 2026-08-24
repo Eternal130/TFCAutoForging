@@ -1,9 +1,12 @@
 
-name: Release tagged build
+name: Release tagged build (disabled)
+
+# 已由 release-multi.yml 取代（多分支集中发布）。
+# 保留此文件仅供回退：把 tags 改回 '*' 即可恢复原行为。
 
 on:
   push:
-    tags: [ '*' ]
+    tags: [ 'disabled-*' ]
 
 permissions:
   contents: write
