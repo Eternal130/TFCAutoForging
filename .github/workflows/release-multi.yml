@@ -84,7 +84,7 @@ jobs:
           [[ "$B_2" == "true" ]] && add TFC1.7.10       17
           [[ "$B_3" == "true" ]] && add TFCTNG1.12      8
           [[ "$B_4" == "true" ]] && add TFCTNG1.18      17
-          [[ "$B_5" == "true" ]] && add TFCTNG1.20      21
+          [[ "$B_5" == "true" ]] && add TFCTNG1.20      17
           [[ "$B_6" == "true" ]] && add TFCTNG1.21      21
           if [ -z "$entries" ]; then
             echo "::error::No branch selected"
