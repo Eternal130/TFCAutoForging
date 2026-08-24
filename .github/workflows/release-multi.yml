@@ -55,6 +55,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set.outputs.matrix }}
       release_tag: ${{ steps.tag.outputs.release_tag }}
+      mod_version: ${{ steps.tag.outputs.mod_version }}
     steps:
       - name: Resolve release tag
         id: tag
@@ -65,6 +66,7 @@ jobs:
             exit 1
           fi
           echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "mod_version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build matrix from inputs
         id: set
@@ -98,7 +100,7 @@ jobs:
       max-parallel: 3
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     env:
-      VERSION: ${{ needs.prepare.outputs.release_tag }}
+      VERSION: ${{ needs.prepare.outputs.mod_version }}
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
