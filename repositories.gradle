@@ -1,5 +1,13 @@
 // Add any additional repositories for your dependencies here.
 
 repositories {
-
+    // TFC-Quick-Pockets: only published on GitHub Releases, no maven repo.
+    // URL pattern: https://github.com/blat-blatnik/TFC-Quick-Pockets/releases/download/v1.1.6/tfcquickpockets-1.1.6.jar
+    ivy {
+        url "https://github.com/blat-blatnik/TFC-Quick-Pockets/releases/download"
+        patternLayout {
+            artifact "v[revision]/tfcquickpockets-[revision].[ext]"
+        }
+        metadataSources { artifact() }
+    }
 }
