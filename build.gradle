@@ -16,7 +16,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = "${mc_version}-${mod_version}"
+version = System.getenv('VERSION') ?: "${mc_version}-${mod_version}"
 group = 'com.eternal130.tfcaf' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'tfcaf' + "-tfctng"
 
@@ -63,7 +63,7 @@ dependencies {
     // that the dep is a ForgeGradle 'patcher' dependency. And it's patches will be applied.
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
     minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2860'
-    compileOnly files("libs/TerraFirmaCraft-MC1.12.2-1.7.23.181-deobf.jar")
+    deobf "curse.maven:terrafirmacraft-302973:3645502"
 
     // You may put jars on which you depend on in ./libs or you may define them like so..
     // compile "some.group:artifact:version:classifier"
@@ -105,6 +105,12 @@ jar {
 jar.finalizedBy('reobfJar') 
 // However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
 //publish.dependsOn('reobfJar')
+
+repositories {
+    maven {
+        url "https://cursemaven.com"
+    }
+}
 
 publishing {
     publications {
