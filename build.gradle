@@ -16,7 +16,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 
 
-version = System.getenv('VERSION') ?: '1.18.2-1.5'
+version = "${mc_version}-${System.getenv('VERSION') ?: mod_version}"
 group = 'com.eternal130.tfcaf' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'tfcaf' + "-tfctng"
 
