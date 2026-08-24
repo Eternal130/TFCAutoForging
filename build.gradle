@@ -16,7 +16,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = System.getenv('VERSION') ?: "${mc_version}-${mod_version}"
+version = "${mc_version}-${System.getenv('VERSION') ?: mod_version}"
 group = 'com.eternal130.tfcaf' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'tfcaf' + "-tfctng"
 
