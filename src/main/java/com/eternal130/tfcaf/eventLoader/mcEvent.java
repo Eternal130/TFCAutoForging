@@ -62,9 +62,13 @@ public class mcEvent {
     static boolean slotWasEmpty = false;
     // 离开过砧GUI(关闭/切到方案界面等),重开时视为玩家明确的继续信号,用于解除完工停机
     static boolean wasGuiChangedSinceLastDraw = false;
-    // 发包模式连发的本地预测状态:发出操作包后不等服务器同步,本地直接推进数值与最后三步,
-    // 以此连续计算并发送下一步,实现连发;服务器同步到达时与预测自动收敛
+    // 发包模式连发的本地预测状态:发出操作包后不等服务器同步,本地直接推进数值,
+    // 服务器同步到达时与预测自动收敛(现在仅在一次性连发结束时记录终点预测值,供兜底超时判断)
     static int predictedPoint = -1;
+    // 连发兜底超时:整段序列发完后,若服务器因温度等原因拒收了部分包,产物永远不出现,
+    // 超时后清除连发状态,允许用服务器真实状态重新推导连发(自愈)
+    static int burstTimeout = 0;
+    static final int BURST_TIMEOUT_TICKS = 100;
 
     public mcEvent() {
         MinecraftForge.EVENT_BUS.register(this);// 将本类中的事件处理程序注册到forge总线
@@ -87,6 +91,7 @@ public class mcEvent {
                 jobInputItemId = -1;
                 finalStrikeSent = false;
                 predictedPoint = -1;
+                burstTimeout = 0;
             }
             if (wasInAnvilGui != isInAnvilGui) {
                 wasGuiChangedSinceLastDraw = true;
@@ -114,6 +119,7 @@ public class mcEvent {
                     TFCAutoForging.isJobDone = true;
                     finalStrikeSent = false;
                     predictedPoint = -1;
+                    burstTimeout = 0;
                     jobInputItemId = Item.getIdFromItem(inputStack.getItem());
                 } else if (inputStack.isEmpty()) {
                     // 输入槽被清空(玩家取走产物或原料)或容器同步抖动(槽位短暂为空),
@@ -124,6 +130,7 @@ public class mcEvent {
                     // 槽内物品相对基线发生变化且不是完工顶替,是玩家主动换料,视为开始新的一件,解除停机
                     TFCAutoForging.isJobDone = false;
                     predictedPoint = -1;
+                    burstTimeout = 0;
                     jobInputItemId = Item.getIdFromItem(inputStack.getItem());
                 }
 
@@ -134,17 +141,7 @@ public class mcEvent {
                     // 目标锻造数值,此值由世界种子和锻造配方唯一指定,当当前锻造数值等于目标锻造数值,并且最后三步满足锻造要求时,锻造完成
                     int targetPoint = anvilTE.getWorkingTarget();
 
-                    // 发包模式连发:预测值有效时用预测值计算(不等服务器同步,实现连发),
-                    // 服务器值追上预测值说明发出的包已全部处理,清预测回到服务器值为起点的状态
-                    if (ConfigFile.enablePacketForging && predictedPoint != -1) {
-                        if (currentPoint == predictedPoint) {
-                            predictedPoint = -1;
-                        } else {
-                            currentPoint = predictedPoint;
-                        }
-                    }
-
-                    // 服务器响应检测(仅点击模式使用;发包模式连发不等服务器)
+                    // 服务器响应检测(仅点击模式使用;发包模式一次连发不等服务器逐步确认)
                     if (!ConfigFile.enablePacketForging && TFCAutoForging.isWaitingForServer) {
                         // 如果当前数值与上次记录的点击前数值不同，说明服务器已更新进度
                         if (currentPoint != TFCAutoForging.lastWorkValue) {
@@ -229,33 +226,62 @@ public class mcEvent {
                     }
                     // 当开启自动锻造功能并且计时器为0时,且服务器已响应（不在等待状态）时才执行点击
                     // 完工后停机,直到玩家重开GUI或换料,防止服务器自动重选配方后对产物继续开工
-                    // 发包模式连发:跳过等待与冷却闸门(DrawScreen每帧一次即连发节奏,无需节流)
+                    // 发包模式连发:一次性推导全部步骤连发;连发进行中(burstTimeout>0)禁止重入,
+                    // 防止基于滞后服务器状态二次推导出错误序列导致服务器数值冲过150炸砧
                     if (enableAutoForging && (ConfigFile.enablePacketForging
                         || (TFCAutoForging.timer == 0 && !TFCAutoForging.isWaitingForServer))
-                        && !TFCAutoForging.isJobDone) {
+                        && !TFCAutoForging.isJobDone
+                        && burstTimeout == 0) {
                         ItemStack stack = inventory.getStackInSlot(0);
                         IForgeable cap = stack.getCapability(CapabilityForgeable.FORGEABLE_CAPABILITY, null);
                         // 温度不够时不进行锻造
                         if (cap == null || !cap.isWorkable())
                             return;
-                        // 本次敲击为本件最后一步时置标志,等待服务器确认完工后停机
-                        finalStrikeSent = Util.isFinalStep(
-                            targetPoint - currentPoint - ruleOffset,
-                            lastOperations,
-                            steps);
                         // TFCAutoForging.logger.info(TFCAutoForging.MODID + ":敲击!");
                         if (ConfigFile.enablePacketForging) {
-                            // 发包模式连发:发完包本地立即推进预测状态(数值+最后三步),下一帧继续计算发送;
-                            // 不设等待/冷却,服务器同步追上预测值时自动校准
-                            predictedPoint = currentPoint + Util.operations[offsetNextOperation];
-                            steps.addStep(ForgeStep.values()[Util.buttonMapping.get(offsetNextOperation)]);
-                            TerraFirmaCraft.getNetwork()
-                                .sendToServer(new PacketGuiButton(Util.buttonMapping.get(offsetNextOperation)));
+                            // 发包模式:在本地循环推导剩余全部步骤并连发完毕
+                            // (1.12的ForgeSteps是可变对象,直接推进它做预测;服务器同步到达时会整体覆盖)
+                            int burstPoint = currentPoint;
+                            int burstGuard = 0;
+                            while (burstGuard++ < 40) {
+                                int offset = Util.nextOperationOffset(
+                                    targetPoint - burstPoint - ruleOffset,
+                                    lastOperations,
+                                    steps);
+                                if (offset < 0) {
+                                    break;
+                                }
+                                // 越界保险:服务器数值超过150会销毁物品(炸砧),推导起点若与服务器失准,
+                                // 序列可能把服务器数值推过上限,宁可中止本轮等待burstTimeout自愈重推
+                                if (burstPoint + Util.operations[offset] > 150
+                                    || burstPoint + Util.operations[offset] < 0) {
+                                    break;
+                                }
+                                finalStrikeSent = Util.isFinalStep(
+                                    targetPoint - burstPoint - ruleOffset,
+                                    lastOperations,
+                                    steps);
+                                TerraFirmaCraft.getNetwork()
+                                    .sendToServer(new PacketGuiButton(Util.buttonMapping.get(offset)));
+                                burstPoint += Util.operations[offset];
+                                steps.addStep(ForgeStep.values()[Util.buttonMapping.get(offset)]);
+                                if (finalStrikeSent) {
+                                    // 最后一步已发出,记录终点预测值供兜底超时判断,等待服务器产物顶替确认
+                                    predictedPoint = burstPoint;
+                                    burstTimeout = BURST_TIMEOUT_TICKS;
+                                    break;
+                                }
+                            }
                         } else {
                             // 记录当前数值，并标记为"正在等待服务器响应"
                             TFCAutoForging.lastWorkValue = currentPoint;
                             TFCAutoForging.isWaitingForServer = true;
                             TFCAutoForging.waitTimeout = TFCAutoForging.WAIT_TIMEOUT_TICKS;
+                            // 本次点击为本件最后一步时置标志,等待服务器确认完工(产物顶替)后停机
+                            finalStrikeSent = Util.isFinalStep(
+                                targetPoint - currentPoint - ruleOffset,
+                                lastOperations,
+                                steps);
                             // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                             TFCAutoForging.timer = (short) ConfigFile.autoForgingCooldown;
                             // 获取按钮列表,触发按按钮事件需要这个参数
@@ -304,6 +330,15 @@ public class mcEvent {
         if (TFCAutoForging.isWaitingForServer && TFCAutoForging.waitTimeout > 0) {
             TFCAutoForging.waitTimeout--;
         }
+        if (burstTimeout > 0) {
+            burstTimeout--;
+            if (burstTimeout == 0 && finalStrikeSent) {
+                // 连发兜底:最后一步发出后长时间未见产物顶替,说明服务器拒收了部分包
+                // (如温度下降),清除连发状态,允许基于服务器真实状态重新推导
+                finalStrikeSent = false;
+                predictedPoint = -1;
+            }
+        }
     }
 
     @SubscribeEvent
@@ -327,6 +362,7 @@ public class mcEvent {
             player.sendMessage(new TextComponentTranslation("key.eternal130.switchPacketForging.info", ConfigFile.enablePacketForging));
             // 模式切换时清除本地预测状态,回到以服务器同步值为起点的节奏
             predictedPoint = -1;
+            burstTimeout = 0;
             ConfigFile.config.save();
         }
         if (KeyBind.switchAutoForging.isPressed()) {
