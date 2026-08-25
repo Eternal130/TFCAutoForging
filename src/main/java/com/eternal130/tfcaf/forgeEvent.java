@@ -210,8 +210,11 @@ public class forgeEvent {
                     }
                     // 当开启自动锻造功能并且计时器为0时
                     // 只有当计时器归零 且 服务器已响应（不在等待状态）时才执行点击
-                    // 发包模式连发:跳过等待与冷却闸门,一次性推导出从当前状态到完工的全部步骤序列并连发
+                    // 发包模式连发:一次性推导出从当前状态到完工的全部步骤序列并连发;
+                    // 连发进行中(burstTimeout>0)禁止重入,防止基于滞后服务器状态二次推导出
+                    // 错误序列导致服务器数值冲过150炸砧
                     if (enableAutoForging.get() && !finalStrikeSent && !isJobDone
+                        && burstTimeout == 0
                         && (ConfigFile.enablePacketForging.get()
                         || (TFCAutoForging.timer == 0 && !TFCAutoForging.isWaitingForServer))) {
                         ItemStack stack = anvilTE.getInventory().getStackInSlot(0);
@@ -237,6 +240,12 @@ public class forgeEvent {
                                 if (offset < 0) {
                                     break;
                                 }
+                                // 越界保险:服务器数值超过150会销毁物品(炸砧),推导起点若与服务器失准,
+                                // 序列可能把服务器数值推过上限,宁可中止本轮等待burstTimeout自愈重推
+                                if (burstPoint + Util.operations[offset] > 150
+                                    || burstPoint + Util.operations[offset] < 0) {
+                                    break;
+                                }
                                 finalStrikeSent = Util.isFinalStep(
                                     targetPoint - burstPoint - ruleOffset,
                                     lastOperations,
@@ -254,6 +263,11 @@ public class forgeEvent {
                                     burstTimeout = BURST_TIMEOUT_TICKS;
                                     break;
                                 }
+                            }
+                            if (!finalStrikeSent && burstGuard > 1) {
+                                // 序列发完但未到达最后一步(越界/无解中止):设短冷却等服务器同步已发包的
+                                // 真实状态后再续推,避免立即用滞后的起点重推
+                                burstTimeout = 20;
                             }
                         } else {
                             // 记录当前数值，并标记为"正在等待服务器响应"
