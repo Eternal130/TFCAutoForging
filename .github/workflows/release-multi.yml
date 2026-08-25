@@ -80,8 +80,8 @@ jobs:
         run: |
           entries=""
           add() { entries="${entries}{\"branch\":\"$1\",\"java\":$2},"; }
-          [[ "$B_1" == "true" ]] && add TFCPlus1.7.10  17
-          [[ "$B_2" == "true" ]] && add TFC1.7.10       17
+          [[ "$B_1" == "true" ]] && add TFCPlus1.7.10  25
+          [[ "$B_2" == "true" ]] && add TFC1.7.10       25
           [[ "$B_3" == "true" ]] && add TFCTNG1.12      8
           [[ "$B_4" == "true" ]] && add TFCTNG1.18      17
           [[ "$B_5" == "true" ]] && add TFCTNG1.20      17
