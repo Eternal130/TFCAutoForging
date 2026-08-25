@@ -9,11 +9,14 @@ public class KeyBind {
     // 按键类
     public static KeyMapping switchAutoForging;
     public static KeyMapping switchForgingTip;
+    public static KeyMapping switchPacketForging;
 
     public KeyBind() {
         switchAutoForging = new KeyMapping("key.eternal130.switchAutoForging", GLFW.GLFW_KEY_F, "key.categories.tfcaf");
         switchForgingTip = new KeyMapping("key.eternal130.switchForgingTip", GLFW.GLFW_KEY_G, "key.categories.tfcaf");
+        switchPacketForging = new KeyMapping("key.eternal130.switchPacketForging", GLFW.GLFW_KEY_H, "key.categories.tfcaf");
         ClientRegistry.registerKeyBinding(switchAutoForging);
         ClientRegistry.registerKeyBinding(switchForgingTip);
+        ClientRegistry.registerKeyBinding(switchPacketForging);
     }
 }
