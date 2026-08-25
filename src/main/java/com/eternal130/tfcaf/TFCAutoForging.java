@@ -25,6 +25,15 @@ public class TFCAutoForging {
     public static final String MODNAME = "TFC Auto Forging";
     public static final Logger LOG = LogManager.getLogger(MODID);
     public static short timer = 0;
+    public static int lastWorkValue = -1; // 记录点击瞬间的数值
+    public static boolean isWaitingForServer = false; // 是否正在等待服务器响应
+    // 等待服务器响应的超时计数器(tick),服务器存在5tick的敲击冷却,包被静默吞掉时数值不会变化,
+    // 超时后强制解除等待状态并重试,防止自动锻造卡死
+    public static short waitTimeout = 0;
+    public static final short WAIT_TIMEOUT_TICKS = 20;
+    // 单件完工状态:服务器完成锻造后只清自己的craftingPlan且不同步给客户端,
+    // 客户端的旧plan会对新放入的同种原料重新匹配出配方,导致自动锻造连续开工
+    public static boolean isJobDone = false;
     // 下面的proxy会在调用时自行判断在服务器还是客户端运行
     @SidedProxy(
         clientSide = "com.eternal130.tfcaf.proxy.ClientProxy",

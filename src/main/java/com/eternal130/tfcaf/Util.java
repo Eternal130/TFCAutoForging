@@ -14,6 +14,20 @@ public class Util {
     public static final Map<Integer, Integer> operationsTfc = new HashMap<>();
     public static final Map<Integer, Integer> buttonMapping = new HashMap<>();
 
+    public static boolean isFinalStep(int Difference, int[] lastRules, int[] itemRules) {
+        /**
+         * 判断即将执行的这步是否为本件的最后一步.
+         *
+         * @param Difference 目标锻造值-当前锻造值-锻造偏移值
+         * @param lastRules  锻造步骤要求
+         * @param itemRules  最后三步步骤
+         * @return 是否为最后一步
+         */
+        return Difference + operations[lastRules[2]] + operations[lastRules[1]] == 0
+            && operationsTfc.get(itemRules[0]) == lastRules[1]
+            && operationsTfc.get(itemRules[1]) == lastRules[2];
+    }
+
     public static int nextOperationOffset(int Difference, int[] lastRules, int[] itemRules) {
         /**
          * 计算下一步步骤.
