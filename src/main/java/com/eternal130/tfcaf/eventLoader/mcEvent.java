@@ -12,6 +12,7 @@ import com.eternal130.tfcaf.KeyBind;
 import net.dries007.tfc.api.capability.forge.CapabilityForgeable;
 import net.dries007.tfc.api.capability.forge.IForgeable;
 import net.dries007.tfc.api.recipes.anvil.AnvilRecipe;
+import net.dries007.tfc.client.gui.GuiAnvilPlan;
 import net.dries007.tfc.client.gui.GuiAnvilTFC;
 import net.dries007.tfc.client.gui.GuiContainerTFC;
 import net.dries007.tfc.objects.te.TEAnvilTFC;
@@ -24,6 +25,7 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextComponentTranslation;
@@ -45,6 +47,15 @@ import com.eternal130.tfcaf.config.ConfigFile;
 public class mcEvent {
 
     static ResourceLocation res = new ResourceLocation("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
+    static boolean wasInAnvilGui = false; // 跟踪上一次是否在铁砧GUI中
+    // 本件锻造任务开始时输入槽物品的标识(item的数字id),用于检测输入槽物品被替换
+    static int jobInputItemId = -1;
+    // 已发出本件最后一步敲击,等待服务器确认完工(输入槽物品被替换)后停机
+    static boolean finalStrikeSent = false;
+    // 输入槽上一帧为空,用于检测"取出再放回"(物品id不变,只能靠空->有物品的变化识别玩家意图)
+    static boolean slotWasEmpty = false;
+    // 离开过砧GUI(关闭/切到方案界面等),重开时视为玩家明确的继续信号,用于解除完工停机
+    static boolean wasGuiChangedSinceLastDraw = false;
 
     public mcEvent() {
         MinecraftForge.EVENT_BUS.register(this);// 将本类中的事件处理程序注册到forge总线
@@ -57,15 +68,72 @@ public class mcEvent {
          */
         // TFCAutoForging.LOG.info(event.gui.toString());
         try {
-            if (event.getGui() instanceof GuiAnvilTFC) {
+            boolean isInAnvilGui = event.getGui() instanceof GuiAnvilTFC;
+            // 检测GUI关闭：上一次在铁砧GUI中，当前不在(方案界面除外,那属于同一工作流),重置状态
+            if (wasInAnvilGui && !isInAnvilGui && !(event.getGui() instanceof GuiAnvilPlan)) {
+                TFCAutoForging.isWaitingForServer = false;
+                TFCAutoForging.waitTimeout = 0;
+                TFCAutoForging.lastWorkValue = -1;
+                TFCAutoForging.isJobDone = false;
+                jobInputItemId = -1;
+                finalStrikeSent = false;
+            }
+            if (wasInAnvilGui != isInAnvilGui) {
+                wasGuiChangedSinceLastDraw = true;
+            }
+            wasInAnvilGui = isInAnvilGui;
+            if (isInAnvilGui) {
                 // 检测当前gui是否是砧gui
                 TEAnvilTFC anvilTE = getTEAnvilTFC((GuiAnvilTFC) event.getGui());
+                ItemStackHandler inventory = getInventory(anvilTE);
+                ItemStack inputStack = inventory.getStackInSlot(0);
+
+                // 取出再放回(物品id不变,但经历了空->有物品)或重开GUI/选完方案回到砧GUI,
+                // 都视为玩家明确的继续信号,解除完工停机
+                if (slotWasEmpty && !inputStack.isEmpty()
+                    || (wasGuiChangedSinceLastDraw && TFCAutoForging.isJobDone)) {
+                    TFCAutoForging.isJobDone = false;
+                }
+                slotWasEmpty = inputStack.isEmpty();
+                wasGuiChangedSinceLastDraw = false;
+
+                // 完工确认:发出最后一步后输入槽物品被替换,说明服务器已产出成品放回输入槽,本件完工停机
+                // 停机的同时把基线更新为产物的id,这样产物继续留在槽里不会被误判为玩家换料
+                if (finalStrikeSent && !inputStack.isEmpty()
+                    && Item.getIdFromItem(inputStack.getItem()) != jobInputItemId) {
+                    TFCAutoForging.isJobDone = true;
+                    finalStrikeSent = false;
+                    jobInputItemId = Item.getIdFromItem(inputStack.getItem());
+                } else if (inputStack.isEmpty()) {
+                    // 输入槽被清空(玩家取走产物或原料)或容器同步抖动(槽位短暂为空),
+                    // 保留基线:同步抖动后同id物品回来时不会触发换料逻辑,避免误清状态
+                } else if (jobInputItemId == -1) {
+                    jobInputItemId = Item.getIdFromItem(inputStack.getItem());
+                } else if (Item.getIdFromItem(inputStack.getItem()) != jobInputItemId) {
+                    // 槽内物品相对基线发生变化且不是完工顶替,是玩家主动换料,视为开始新的一件,解除停机
+                    TFCAutoForging.isJobDone = false;
+                    jobInputItemId = Item.getIdFromItem(inputStack.getItem());
+                }
+
                 if (enableAutoForging || enableForgingTip) {
                     // 当锻造提示功能和自动锻造功能有一个开启时就计算下一步锻造步骤
                     // 当前锻造数值,此值在选择任意锻造操作时改变
                     int currentPoint = anvilTE.getWorkingProgress();
                     // 目标锻造数值,此值由世界种子和锻造配方唯一指定,当当前锻造数值等于目标锻造数值,并且最后三步满足锻造要求时,锻造完成
                     int targetPoint = anvilTE.getWorkingTarget();
+
+                    // 服务器响应检测
+                    if (TFCAutoForging.isWaitingForServer) {
+                        // 如果当前数值与上次记录的点击前数值不同，说明服务器已更新进度
+                        if (currentPoint != TFCAutoForging.lastWorkValue) {
+                            TFCAutoForging.isWaitingForServer = false;
+                        } else if (TFCAutoForging.waitTimeout == 0) {
+                            // 超时仍未收到服务器响应,锻造数值同步异常,
+                            // 强制解除等待状态,让下一次循环重试,防止自动锻造卡死
+                            TFCAutoForging.isWaitingForServer = false;
+                        }
+                    }
+
                     // 如果目标锻造数值为0,则退出程序,意味着当前并没有选择配方,无需继续计算
                     if (targetPoint == 0) {
                         return;
@@ -137,15 +205,26 @@ public class mcEvent {
                         // 下面代码可以在指定位置渲染一个16*16的方框,具体怎么渲染可以去问gpt
                         drawbox(x, y);
                     }
-                    // 当开启自动锻造功能并且计时器为0时
-                    if (enableAutoForging && TFCAutoForging.timer == 0) {
-                        ItemStackHandler inventory = getInventory(anvilTE);
+                    // 当开启自动锻造功能并且计时器为0时,且服务器已响应（不在等待状态）时才执行点击
+                    // 完工后停机,直到玩家重开GUI或换料,防止服务器自动重选配方后对产物继续开工
+                    if (enableAutoForging && TFCAutoForging.timer == 0
+                        && !TFCAutoForging.isWaitingForServer
+                        && !TFCAutoForging.isJobDone) {
                         ItemStack stack = inventory.getStackInSlot(0);
                         IForgeable cap = stack.getCapability(CapabilityForgeable.FORGEABLE_CAPABILITY, null);
                         // 温度不够时不进行锻造
                         if (cap == null || !cap.isWorkable())
                             return;
-                        // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
+                        // 记录当前数值，并标记为"正在等待服务器响应"
+                        TFCAutoForging.lastWorkValue = currentPoint;
+                        TFCAutoForging.isWaitingForServer = true;
+                        TFCAutoForging.waitTimeout = TFCAutoForging.WAIT_TIMEOUT_TICKS;
+                        // 本次敲击为本件最后一步时置标志,等待服务器确认完工后停机
+                        finalStrikeSent = Util.isFinalStep(
+                            targetPoint - currentPoint - ruleOffset,
+                            lastOperations,
+                            steps);
+                        // TFCAutoForging.logger.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = (short) ConfigFile.autoForgingCooldown;
                         // 获取按钮列表,触发按按钮事件需要这个参数
@@ -172,11 +251,18 @@ public class mcEvent {
     }
     @SubscribeEvent
     public void timer(TickEvent.ClientTickEvent event) {
-        // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":tick事件");
+        // ClientTickEvent每tick触发两次(START和END阶段),只在START阶段计时,否则timer和waitTimeout会以2倍速递减
+        if (event.phase != TickEvent.Phase.START) {
+            return;
+        }
+        // TFCAutoForging.logger.info(TFCAutoForging.MODID + ":tick事件");
         // 设置计时器的值,大于0时每tick-1
         if (TFCAutoForging.timer > 0) {
-            // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":重置计时器");
+            // TFCAutoForging.logger.info(TFCAutoForging.MODID + ":重置计时器");
             TFCAutoForging.timer--;
+        }
+        if (TFCAutoForging.isWaitingForServer && TFCAutoForging.waitTimeout > 0) {
+            TFCAutoForging.waitTimeout--;
         }
     }
 
@@ -198,6 +284,9 @@ public class mcEvent {
                     Configuration.CATEGORY_GENERAL,
                     ConfigFile.enableAutoForging,
                     "Is it fully automatic forging?");
+            // 切换时重置状态，防止卡死
+            TFCAutoForging.isWaitingForServer = false;
+            TFCAutoForging.waitTimeout = 0;
             EntityPlayer player = Minecraft.getMinecraft().player;
             // 在游戏中提示当前值
             player.sendMessage(new TextComponentTranslation("key.eternal130.switchAutoForging.info", ConfigFile.enableAutoForging));

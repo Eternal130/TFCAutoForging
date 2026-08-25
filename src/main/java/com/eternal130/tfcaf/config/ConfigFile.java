@@ -8,7 +8,7 @@ public class ConfigFile {
 
     public static boolean enableAutoForging = true;
     public static boolean enableForgingTip = true;
-    public static int autoForgingCooldown = 20;
+    public static int autoForgingCooldown = 10;
     public static int highlightStepCooldown = 100;// 高亮提示单帧持续时间(ms)
     public static int totalFrames = 16;// 高亮提示动画总帧数
     public static int framesPerRow = 4;// 材质每行帧数
@@ -37,10 +37,10 @@ public class ConfigFile {
         autoForgingCooldown = config.getInt(
                 "autoForgingCooldown",
                 Configuration.CATEGORY_GENERAL,
-                20,
+                10,
                 1,
                 200,
-                "cooldown of each automatic forging step(tick)");
+                "cooldown of each automatic forging step(tick), bounded below by server sync round trip");
         highlightStepCooldown = config.getInt(
                 "highlightStepCooldown",
                 Configuration.CATEGORY_GENERAL,
