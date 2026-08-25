@@ -31,6 +31,9 @@ public class TFCAutoForging {
     // 超时后强制解除等待状态并重试,防止自动锻造卡死
     public static short waitTimeout = 0;
     public static final short WAIT_TIMEOUT_TICKS = 20;
+    // 单件完工状态:服务器完成锻造后只清自己的craftingPlan且不同步给客户端,
+    // 客户端的旧plan会对新放入的同种原料重新匹配出配方,导致自动锻造连续开工
+    public static boolean isJobDone = false;
     // 下面的proxy会在调用时自行判断在服务器还是客户端运行
     @SidedProxy(
         clientSide = "com.eternal130.tfcaf.proxy.ClientProxy",
