@@ -82,16 +82,16 @@ public class mcEvent {
                     // 保留基线:同步抖动后同id物品回来时不会触发换料逻辑,避免误清玩家刚选的方案
                 } else if (jobInputItemId != -1
                     && Item.getIdFromItem(anvilTE.anvilItemStacks[1].getItem()) != jobInputItemId) {
-                    // 槽内物品相对基线发生变化且不是完工顶替,是玩家主动换料,视为开始新的一件,解除停机继续锻造
-                    // 服务器完工时只清自己侧的craftingPlan且从不同步,客户端残留的旧方案与服务器不一致;
-                    // 且同一种原料可对应多个方案(如全套工具),不能自动套用旧方案,因此清空客户端方案让玩家重新选择
-                    // 注意只在已知基线且物品变化时清:初次放料(基线-1)和选方案触发的GUI切换/容器重同步不能清,
-                    // 否则玩家刚选的方案会被容器同步抖动清掉
-                    TFCAutoForging.isJobDone = false;
-                    jobInputItemId = Item.getIdFromItem(anvilTE.anvilItemStacks[1].getItem());
-                    anvilTE.craftingPlan = "";
-                    jobPlan = "";
-                }
+                        // 槽内物品相对基线发生变化且不是完工顶替,是玩家主动换料,视为开始新的一件,解除停机继续锻造
+                        // 服务器完工时只清自己侧的craftingPlan且从不同步,客户端残留的旧方案与服务器不一致;
+                        // 且同一种原料可对应多个方案(如全套工具),不能自动套用旧方案,因此清空客户端方案让玩家重新选择
+                        // 注意只在已知基线且物品变化时清:初次放料(基线-1)和选方案触发的GUI切换/容器重同步不能清,
+                        // 否则玩家刚选的方案会被容器同步抖动清掉
+                        TFCAutoForging.isJobDone = false;
+                        jobInputItemId = Item.getIdFromItem(anvilTE.anvilItemStacks[1].getItem());
+                        anvilTE.craftingPlan = "";
+                        jobPlan = "";
+                    }
                 // 玩家重选方案(方案字符串变化),视为主动开始新任务
                 if (!anvilTE.craftingPlan.equals(jobPlan)) {
                     TFCAutoForging.isJobDone = false;
@@ -215,10 +215,8 @@ public class mcEvent {
                         TFCAutoForging.isWaitingForServer = true;
                         TFCAutoForging.waitTimeout = TFCAutoForging.WAIT_TIMEOUT_TICKS;
                         // 本次敲击为本件最后一步时置标志,等待服务器确认完工后停机
-                        finalStrikeSent = Util.isFinalStep(
-                            targetPoint - currentPoint - ruleOffset,
-                            lastOperations,
-                            itemRules);
+                        finalStrikeSent = Util
+                            .isFinalStep(targetPoint - currentPoint - ruleOffset, lastOperations, itemRules);
                         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = (short) ConfigFile.autoForgingCooldown;
