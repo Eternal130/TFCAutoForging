@@ -56,7 +56,13 @@ jobs:
       matrix: ${{ steps.set.outputs.matrix }}
       release_tag: ${{ steps.tag.outputs.release_tag }}
       mod_version: ${{ steps.tag.outputs.mod_version }}
+      changelog: ${{ steps.changelog.outputs.body }}
     steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref }}
+
       - name: Resolve release tag
         id: tag
         run: |
@@ -67,6 +73,20 @@ jobs:
           fi
           echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "mod_version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Read changelog
+        id: changelog
+        run: |
+          TAG="${{ steps.tag.outputs.release_tag }}"
+          if [ -f ".changelogs/${TAG}.md" ]; then
+            echo "body<<CHANGELOG_EOF" >> "$GITHUB_OUTPUT"
+            cat ".changelogs/${TAG}.md" >> "$GITHUB_OUTPUT"
+            echo "CHANGELOG_EOF" >> "$GITHUB_OUTPUT"
+          elif [ -f ".changelogs/default.md" ]; then
+            echo "body<<CHANGELOG_EOF" >> "$GITHUB_OUTPUT"
+            cat ".changelogs/default.md" >> "$GITHUB_OUTPUT"
+            echo "CHANGELOG_EOF" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build matrix from inputs
         id: set
@@ -144,6 +164,7 @@ jobs:
         with:
           tag_name: ${{ needs.prepare.outputs.release_tag }}
           files: dist/*.jar
+          body: ${{ needs.prepare.outputs.changelog }}
           # 已存在则追加文件，不覆盖其他分支的产物
           make_latest: true
 
