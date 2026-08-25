@@ -227,10 +227,12 @@ public class mcEvent {
                     }
                     // 当开启自动锻造功能并且计时器为0时,且服务器已响应（不在等待状态）时才执行点击
                     // 完工后停机,直到玩家重开GUI或换料,防止服务器自动重选配方后对产物继续开工
-                    // 发包模式连发:跳过等待与冷却闸门(DrawScreen每帧一次即连发节奏,无需节流)
+                    // 发包模式连发:一次性推导全部步骤连发;连发进行中(burstTimeout>0)禁止重入,
+                    // 防止基于滞后服务器状态二次推导出错误序列导致服务器数值冲过150炸砧
                     if (enableAutoForging.get() && (ConfigFile.enablePacketForging.get()
                         || (TFCAutoForging.timer == 0 && !TFCAutoForging.isWaitingForServer))
-                        && !TFCAutoForging.isJobDone) {
+                        && !TFCAutoForging.isJobDone
+                        && burstTimeout == 0) {
                         ItemStack stack = getInventory(anvilTE).getStackInSlot(0);
                         LazyOptional<IHeat> heat = stack.getCapability(HeatCapability.CAPABILITY);
                         // 温度不够时不进行锻造
@@ -249,6 +251,12 @@ public class mcEvent {
                                     lastOperations,
                                     steps);
                                 if (offset < 0) {
+                                    break;
+                                }
+                                // 越界保险:服务器数值超过150会销毁物品(炸砧),推导起点若与服务器失准,
+                                // 序列可能把服务器数值推过上限,宁可中止本轮等待burstTimeout自愈重推
+                                if (burstPoint + Util.operations[offset] > 150
+                                    || burstPoint + Util.operations[offset] < 0) {
                                     break;
                                 }
                                 finalStrikeSent = Util.isFinalStep(
