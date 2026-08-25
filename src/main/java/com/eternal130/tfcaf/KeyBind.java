@@ -10,11 +10,14 @@ public class KeyBind {
     // 按键类
     public static KeyBinding switchAutoForging;
     public static KeyBinding switchForgingTip;
+    public static KeyBinding switchPacketForging;
 
     public KeyBind() {
         switchAutoForging = new KeyBinding("key.eternal130.switchAutoForging", Keyboard.KEY_F, "key.categories.tfcaf");
         switchForgingTip = new KeyBinding("key.eternal130.switchForgingTip", Keyboard.KEY_G, "key.categories.tfcaf");
+        switchPacketForging = new KeyBinding("key.eternal130.switchPacketForging", Keyboard.KEY_H, "key.categories.tfcaf");
         ClientRegistry.registerKeyBinding(switchAutoForging);
         ClientRegistry.registerKeyBinding(switchForgingTip);
+        ClientRegistry.registerKeyBinding(switchPacketForging);
     }
 }

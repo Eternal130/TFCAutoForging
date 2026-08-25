@@ -3,3 +3,5 @@ key.eternal130.switchAutoForging.info=automatic forging function has been toggle
 key.eternal130.switchForgingTip=Switch forging tip function
 key.eternal130.switchForgingTip.info=forging tip function has been toggled to %s
 key.categories.tfcaf=tfctng auto forging
+key.eternal130.switchPacketForging=Switch packet forging mode
+key.eternal130.switchPacketForging.info=packet forging mode has been toggled to %s (requires auto forging enabled)

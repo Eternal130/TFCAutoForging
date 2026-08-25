@@ -12,11 +12,14 @@ import com.eternal130.tfcaf.KeyBind;
 import net.dries007.tfc.api.capability.forge.CapabilityForgeable;
 import net.dries007.tfc.api.capability.forge.IForgeable;
 import net.dries007.tfc.api.recipes.anvil.AnvilRecipe;
+import net.dries007.tfc.TerraFirmaCraft;
 import net.dries007.tfc.client.gui.GuiAnvilPlan;
 import net.dries007.tfc.client.gui.GuiAnvilTFC;
 import net.dries007.tfc.client.gui.GuiContainerTFC;
+import net.dries007.tfc.network.PacketGuiButton;
 import net.dries007.tfc.objects.te.TEAnvilTFC;
 import net.dries007.tfc.util.forge.ForgeRule;
+import net.dries007.tfc.util.forge.ForgeStep;
 import net.dries007.tfc.util.forge.ForgeSteps;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
@@ -30,6 +33,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraftforge.client.event.GuiScreenEvent;
+import net.minecraftforge.client.event.sound.PlaySoundEvent;
 import net.minecraftforge.common.MinecraftForge;
 
 import net.minecraftforge.common.config.Configuration;
@@ -37,6 +41,8 @@ import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import net.minecraftforge.items.ItemStackHandler;
 import org.lwjgl.opengl.GL11;
 
@@ -56,6 +62,9 @@ public class mcEvent {
     static boolean slotWasEmpty = false;
     // 离开过砧GUI(关闭/切到方案界面等),重开时视为玩家明确的继续信号,用于解除完工停机
     static boolean wasGuiChangedSinceLastDraw = false;
+    // 发包模式连发的本地预测状态:发出操作包后不等服务器同步,本地直接推进数值与最后三步,
+    // 以此连续计算并发送下一步,实现连发;服务器同步到达时与预测自动收敛
+    static int predictedPoint = -1;
 
     public mcEvent() {
         MinecraftForge.EVENT_BUS.register(this);// 将本类中的事件处理程序注册到forge总线
@@ -77,6 +86,7 @@ public class mcEvent {
                 TFCAutoForging.isJobDone = false;
                 jobInputItemId = -1;
                 finalStrikeSent = false;
+                predictedPoint = -1;
             }
             if (wasInAnvilGui != isInAnvilGui) {
                 wasGuiChangedSinceLastDraw = true;
@@ -103,6 +113,7 @@ public class mcEvent {
                     && Item.getIdFromItem(inputStack.getItem()) != jobInputItemId) {
                     TFCAutoForging.isJobDone = true;
                     finalStrikeSent = false;
+                    predictedPoint = -1;
                     jobInputItemId = Item.getIdFromItem(inputStack.getItem());
                 } else if (inputStack.isEmpty()) {
                     // 输入槽被清空(玩家取走产物或原料)或容器同步抖动(槽位短暂为空),
@@ -112,6 +123,7 @@ public class mcEvent {
                 } else if (Item.getIdFromItem(inputStack.getItem()) != jobInputItemId) {
                     // 槽内物品相对基线发生变化且不是完工顶替,是玩家主动换料,视为开始新的一件,解除停机
                     TFCAutoForging.isJobDone = false;
+                    predictedPoint = -1;
                     jobInputItemId = Item.getIdFromItem(inputStack.getItem());
                 }
 
@@ -122,8 +134,18 @@ public class mcEvent {
                     // 目标锻造数值,此值由世界种子和锻造配方唯一指定,当当前锻造数值等于目标锻造数值,并且最后三步满足锻造要求时,锻造完成
                     int targetPoint = anvilTE.getWorkingTarget();
 
-                    // 服务器响应检测
-                    if (TFCAutoForging.isWaitingForServer) {
+                    // 发包模式连发:预测值有效时用预测值计算(不等服务器同步,实现连发),
+                    // 服务器值追上预测值说明发出的包已全部处理,清预测回到服务器值为起点的状态
+                    if (ConfigFile.enablePacketForging && predictedPoint != -1) {
+                        if (currentPoint == predictedPoint) {
+                            predictedPoint = -1;
+                        } else {
+                            currentPoint = predictedPoint;
+                        }
+                    }
+
+                    // 服务器响应检测(仅点击模式使用;发包模式连发不等服务器)
+                    if (!ConfigFile.enablePacketForging && TFCAutoForging.isWaitingForServer) {
                         // 如果当前数值与上次记录的点击前数值不同，说明服务器已更新进度
                         if (currentPoint != TFCAutoForging.lastWorkValue) {
                             TFCAutoForging.isWaitingForServer = false;
@@ -207,40 +229,47 @@ public class mcEvent {
                     }
                     // 当开启自动锻造功能并且计时器为0时,且服务器已响应（不在等待状态）时才执行点击
                     // 完工后停机,直到玩家重开GUI或换料,防止服务器自动重选配方后对产物继续开工
-                    if (enableAutoForging && TFCAutoForging.timer == 0
-                        && !TFCAutoForging.isWaitingForServer
+                    // 发包模式连发:跳过等待与冷却闸门(DrawScreen每帧一次即连发节奏,无需节流)
+                    if (enableAutoForging && (ConfigFile.enablePacketForging
+                        || (TFCAutoForging.timer == 0 && !TFCAutoForging.isWaitingForServer))
                         && !TFCAutoForging.isJobDone) {
                         ItemStack stack = inventory.getStackInSlot(0);
                         IForgeable cap = stack.getCapability(CapabilityForgeable.FORGEABLE_CAPABILITY, null);
                         // 温度不够时不进行锻造
                         if (cap == null || !cap.isWorkable())
                             return;
-                        // 记录当前数值，并标记为"正在等待服务器响应"
-                        TFCAutoForging.lastWorkValue = currentPoint;
-                        TFCAutoForging.isWaitingForServer = true;
-                        TFCAutoForging.waitTimeout = TFCAutoForging.WAIT_TIMEOUT_TICKS;
                         // 本次敲击为本件最后一步时置标志,等待服务器确认完工后停机
                         finalStrikeSent = Util.isFinalStep(
                             targetPoint - currentPoint - ruleOffset,
                             lastOperations,
                             steps);
                         // TFCAutoForging.logger.info(TFCAutoForging.MODID + ":敲击!");
-                        // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
-                        TFCAutoForging.timer = (short) ConfigFile.autoForgingCooldown;
-                        // 获取按钮列表,触发按按钮事件需要这个参数
-                        List<GuiButton> buttonlist = getButtonList((GuiContainerTFC) event.getGui());
-                        // TFCAutoForging.LOG.info("待点按钮id {},待点按钮索引 {},总按钮数 {}",
-                        // buttonlist.get(Util.buttonMapping.get(offsetNextOperation)),Util.buttonMapping.get(offsetNextOperation)
-                        // , buttonlist);
-                        // 因为这个方法是protected权限,因此使用反射来调用,该方法用于处理按钮点击,下面的name为该方法的混淆名,该名被mcp翻译了,反编译代码中看不到正常名
-                        // 使用getDeclaredMethods()方法可以获取所有方法的混淆名,顺序和反编译代码中的相同,因此很好找
-                        Method actionPerformed = event.getGui().getClass()
-                                .getDeclaredMethod("func_146284_a", GuiButton.class);
-                        // 设置权限为public
-                        actionPerformed.setAccessible(true);
-                        // 调用方法,因为按钮索引和用于计算的operations索引都不同,所以经过映射后填入
-                        actionPerformed
-                                .invoke(event.getGui(), buttonlist.get(Util.buttonMapping.get(offsetNextOperation)));
+                        if (ConfigFile.enablePacketForging) {
+                            // 发包模式连发:发完包本地立即推进预测状态(数值+最后三步),下一帧继续计算发送;
+                            // 不设等待/冷却,服务器同步追上预测值时自动校准
+                            predictedPoint = currentPoint + Util.operations[offsetNextOperation];
+                            steps.addStep(ForgeStep.values()[Util.buttonMapping.get(offsetNextOperation)]);
+                            TerraFirmaCraft.getNetwork()
+                                .sendToServer(new PacketGuiButton(Util.buttonMapping.get(offsetNextOperation)));
+                        } else {
+                            // 记录当前数值，并标记为"正在等待服务器响应"
+                            TFCAutoForging.lastWorkValue = currentPoint;
+                            TFCAutoForging.isWaitingForServer = true;
+                            TFCAutoForging.waitTimeout = TFCAutoForging.WAIT_TIMEOUT_TICKS;
+                            // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
+                            TFCAutoForging.timer = (short) ConfigFile.autoForgingCooldown;
+                            // 获取按钮列表,触发按按钮事件需要这个参数
+                            List<GuiButton> buttonlist = getButtonList((GuiContainerTFC) event.getGui());
+                            // 因为这个方法是protected权限,因此使用反射来调用,该方法用于处理按钮点击,下面的name为该方法的混淆名,该名被mcp翻译了,反编译代码中看不到正常名
+                            // 使用getDeclaredMethods()方法可以获取所有方法的混淆名,顺序和反编译代码中的相同,因此很好找
+                            Method actionPerformed = event.getGui().getClass()
+                                    .getDeclaredMethod("func_146284_a", GuiButton.class);
+                            // 设置权限为public
+                            actionPerformed.setAccessible(true);
+                            // 调用方法,因为按钮索引和用于计算的operations索引都不同,所以经过映射后填入
+                            actionPerformed
+                                    .invoke(event.getGui(), buttonlist.get(Util.buttonMapping.get(offsetNextOperation)));
+                        }
                     }
                     // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":绘制成功");
                 }
@@ -249,6 +278,17 @@ public class mcEvent {
             throw new RuntimeException(exception);
         }
     }
+    @SideOnly(Side.CLIENT)
+    @SubscribeEvent
+    public void suppressAnvilSound(PlaySoundEvent event) {
+        // 发包模式静音:服务器每次敲击都会广播砧敲击音,发包连敲时声音密集吵闹,本地拦截不播
+        // (只影响本地音效,不影响其他玩家听到的声音)
+        if (ConfigFile.enablePacketForging && event.getSound() != null
+            && event.getSound().getSoundLocation().toString().contains("anvil.metalimpact")) {
+            event.setResultSound(null);
+        }
+    }
+
     @SubscribeEvent
     public void timer(TickEvent.ClientTickEvent event) {
         // ClientTickEvent每tick触发两次(START和END阶段),只在START阶段计时,否则timer和waitTimeout会以2倍速递减
@@ -274,6 +314,21 @@ public class mcEvent {
     @SubscribeEvent
     public void onKeyInput(InputEvent.KeyInputEvent event) {
         // 快捷键检测
+        if (KeyBind.switchPacketForging.isPressed()) {
+            ConfigFile.config.load();
+            ConfigFile.config.get(Configuration.CATEGORY_GENERAL, "enablePacketForging", false)
+                    .set(!ConfigFile.enablePacketForging);
+            ConfigFile.enablePacketForging = ConfigFile.config.getBoolean(
+                    "enablePacketForging",
+                    Configuration.CATEGORY_GENERAL,
+                    ConfigFile.enablePacketForging,
+                    "Send forging operation packets directly instead of simulating GUI button clicks, only effective when enableAutoForging is on, and suppresses anvil impact sounds locally");
+            EntityPlayer player = Minecraft.getMinecraft().player;
+            player.sendMessage(new TextComponentTranslation("key.eternal130.switchPacketForging.info", ConfigFile.enablePacketForging));
+            // 模式切换时清除本地预测状态,回到以服务器同步值为起点的节奏
+            predictedPoint = -1;
+            ConfigFile.config.save();
+        }
         if (KeyBind.switchAutoForging.isPressed()) {
             ConfigFile.config.load();
             // 修改配置文件中的值

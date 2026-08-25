@@ -8,6 +8,9 @@ public class ConfigFile {
 
     public static boolean enableAutoForging = true;
     public static boolean enableForgingTip = true;
+    // 发包模式:开启后自动锻造直接向服务器发送操作包而非模拟点击GUI按钮,且本地不播放锻造敲击音
+    // 仅在自动锻造开启时生效
+    public static boolean enablePacketForging = false;
     public static int autoForgingCooldown = 10;
     public static int highlightStepCooldown = 100;// 高亮提示单帧持续时间(ms)
     public static int totalFrames = 16;// 高亮提示动画总帧数
@@ -34,6 +37,11 @@ public class ConfigFile {
                 Configuration.CATEGORY_GENERAL,
                 true,
                 "Is the next recommended step highlighted?");
+        enablePacketForging = config.getBoolean(
+                "enablePacketForging",
+                Configuration.CATEGORY_GENERAL,
+                false,
+                "Send forging operation packets directly instead of simulating GUI button clicks, only effective when enableAutoForging is on, and suppresses anvil impact sounds locally");
         autoForgingCooldown = config.getInt(
                 "autoForgingCooldown",
                 Configuration.CATEGORY_GENERAL,
