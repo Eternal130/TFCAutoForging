@@ -35,9 +35,9 @@ public class ConfigFile {
             "autoForgingCooldown",
             Configuration.CATEGORY_GENERAL,
             10,
-            1,
+            6,
             200,
-            "cooldown of each automatic forging step(tick)");
+            "cooldown of each automatic forging step(tick), server anvil cooldown is 5 ticks, values below 6 will get silently dropped");
         highlightStepCooldown = config.getInt(
             "highlightStepCooldown",
             Configuration.CATEGORY_GENERAL,

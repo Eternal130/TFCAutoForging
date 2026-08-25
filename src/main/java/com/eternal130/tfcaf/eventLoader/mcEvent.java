@@ -57,6 +57,7 @@ public class mcEvent {
             // 检测GUI关闭：上一次在铁砧GUI中，当前不在，重置状态
             if (wasInAnvilGui && !isInAnvilGui) {
                 TFCAutoForging.isWaitingForServer = false;
+                TFCAutoForging.waitTimeout = 0;
                 TFCAutoForging.lastWorkValue = -1;
             }
             wasInAnvilGui = isInAnvilGui;
@@ -73,6 +74,10 @@ public class mcEvent {
                     if (TFCAutoForging.isWaitingForServer) {
                         // 如果当前数值与上次记录的点击前数值不同，说明服务器已更新进度
                         if (currentPoint != TFCAutoForging.lastWorkValue) {
+                            TFCAutoForging.isWaitingForServer = false;
+                        } else if (TFCAutoForging.waitTimeout == 0) {
+                            // 超时仍未收到服务器响应,说明该次操作被服务器的敲击冷却静默吞掉,
+                            // 强制解除等待状态,让下一次循环重试,防止自动锻造卡死
                             TFCAutoForging.isWaitingForServer = false;
                         }
                     }
@@ -167,6 +172,7 @@ public class mcEvent {
                         // 记录当前数值，并标记为"正在等待服务器响应"
                         TFCAutoForging.lastWorkValue = currentPoint;
                         TFCAutoForging.isWaitingForServer = true;
+                        TFCAutoForging.waitTimeout = TFCAutoForging.WAIT_TIMEOUT_TICKS;
                         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":敲击!");
                         // 重置计时器的值,可以在配置文件中修改,配置文件可以在游戏中动态修改
                         TFCAutoForging.timer = (short) ConfigFile.autoForgingCooldown;

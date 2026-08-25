@@ -27,11 +27,18 @@ public class fmlEvent {
     @SideOnly(Side.CLIENT)
     @SubscribeEvent
     public void timer(TickEvent.ClientTickEvent event) {
+        // ClientTickEvent每tick触发两次(START和END阶段),只在START阶段计时,否则timer和waitTimeout会以2倍速递减
+        if (event.phase != TickEvent.Phase.START) {
+            return;
+        }
         // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":tick事件");
         // 设置计时器的值,大于0时每tick-1
         if (TFCAutoForging.timer > 0) {
             // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":重置计时器");
             TFCAutoForging.timer--;
+        }
+        if (TFCAutoForging.isWaitingForServer && TFCAutoForging.waitTimeout > 0) {
+            TFCAutoForging.waitTimeout--;
         }
     }
 
@@ -51,6 +58,7 @@ public class fmlEvent {
                 "Is it fully automatic forging?");
             // 切换时重置状态，防止卡死
             TFCAutoForging.isWaitingForServer = false;
+            TFCAutoForging.waitTimeout = 0;
             EntityPlayer player = Minecraft.getMinecraft().thePlayer;
             // 在游戏中提示当前值
             player.addChatMessage(
