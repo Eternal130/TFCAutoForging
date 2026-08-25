@@ -19,6 +19,24 @@ public class Util {
     // 下面这个map用于将最后三步的步骤重映射到operations上
     public static final Map<Integer, Integer> stepTFC = new HashMap<>();
 
+    public static boolean isFinalStep(int Difference, int[] lastRules, List<ForgeStep> itemRules) {
+        /**
+         * 判断即将执行的这步是否为本件的最后一步.
+         *
+         * @param Difference 目标锻造值-当前锻造值-锻造偏移值
+         * @param lastRules  锻造步骤要求
+         * @param itemRules  最后三步步骤
+         * @return 是否为最后一步
+         */
+        // 不足两步时收尾判定必然不成立(新物品lastSteps可能为空,get/getLast会越界崩溃)
+        if (itemRules.size() < 2) {
+            return false;
+        }
+        return Difference + operations[lastRules[2]] + operations[lastRules[1]] == 0
+                && buttonMapping.get(itemRules.getLast().ordinal()) == lastRules[1]
+                && buttonMapping.get(itemRules.get(itemRules.size()-2).ordinal()) == lastRules[2];
+    }
+
     public static int nextOperationOffset(int Difference, int[] lastRules, List<ForgeStep> itemRules) {
         /**
          * 计算下一步步骤.
@@ -31,6 +49,19 @@ public class Util {
 //        TFCAutoForging.logger.info(TFCAutoForging.MODID + ":差值减偏移值{}", Difference);
 //        TFCAutoForging.logger.info("要求三步:{} {} {}", lastRules[0],lastRules[1],lastRules[2]);
 //        TFCAutoForging.logger.info("最后三步:{} {} {}", buttonMapping.get(itemRules.getStep(2).ordinal()),buttonMapping.get(itemRules.getStep(1).ordinal()),buttonMapping.get(itemRules.getStep(0).ordinal()));
+        // 不足两步时收尾分支必然不通过(新物品lastSteps可能为空,get/getLast会越界崩溃),直接走查表
+        if (itemRules.size() < 2) {
+            int[] step = steps.get(Difference);
+            for (int i = 0; i < 7; i++) {
+                if (step[7 - i] > 0) {
+                    return 7 - i;
+                }
+                if (step[i] > 0) {
+                    return i;
+                }
+            }
+            return -1;
+        }
         // 如果偏移差值+要求倒三步+要求倒二步==0,并且当前倒一步是要求倒二步,当前倒二步是要求倒三步
         // 这意味着在满足减去偏移值的基础上,又完成了要求的倒二和倒三,因此下一步就是倒一
         if (Difference + operations[lastRules[2]] + operations[lastRules[1]] == 0

@@ -14,7 +14,9 @@ public class modEvent {
     public static void registerBindings(RegisterKeyMappingsEvent event) {
         TFCAutoForging.switchAutoForging = new KeyMapping("key.eternal130.switchAutoForging", GLFW.GLFW_KEY_F, "key.categories.tfcaf");
         TFCAutoForging.switchForgingTip = new KeyMapping("key.eternal130.switchForgingTip", GLFW.GLFW_KEY_G, "key.categories.tfcaf");
+        TFCAutoForging.switchPacketForging = new KeyMapping("key.eternal130.switchPacketForging", GLFW.GLFW_KEY_H, "key.categories.tfcaf");
         event.register(TFCAutoForging.switchAutoForging);
         event.register(TFCAutoForging.switchForgingTip);
+        event.register(TFCAutoForging.switchPacketForging);
     }
 }

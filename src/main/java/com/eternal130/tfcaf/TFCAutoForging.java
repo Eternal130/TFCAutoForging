@@ -24,10 +24,15 @@ public class TFCAutoForging
 
     public static KeyMapping switchAutoForging;
     public static KeyMapping switchForgingTip;
+    public static KeyMapping switchPacketForging;
     public static int timer = 0;
 
     public static int lastWorkValue = -1;                // 记录点击瞬间的数值
     public static boolean isWaitingForServer = false;    // 是否正在等待服务器响应
+    // 等待服务器响应的超时计数器(tick),锻造数值需等服务器同步回客户端,
+    // 超时后强制解除等待状态并重试,防止自动锻造因同步异常卡死
+    public static int waitTimeout = 0;
+    public static final int WAIT_TIMEOUT_TICKS = 20;
 
     public TFCAutoForging(IEventBus modEventBus, ModContainer modContainer)
     {

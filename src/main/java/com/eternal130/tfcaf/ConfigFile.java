@@ -5,6 +5,9 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public class ConfigFile {
     public static final ModConfigSpec.BooleanValue enableAutoForging;
     public static final ModConfigSpec.BooleanValue enableForgingTip;
+    // 发包模式:开启后自动锻造直接向服务器发送操作包而非模拟点击GUI按钮,且本地不播放锻造敲击音
+    // 仅在自动锻造开启时生效
+    public static final ModConfigSpec.BooleanValue enablePacketForging;
     public static final ModConfigSpec.IntValue autoForgingCooldown;
     public static final ModConfigSpec.IntValue highlightStepCooldown;// 高亮提示单帧持续时间(ms)
     public static final ModConfigSpec.IntValue totalFrames;// 高亮提示动画总帧数
@@ -21,6 +24,7 @@ public class ConfigFile {
         BUILDER.comment("General settings").push("general");
         enableAutoForging = BUILDER.comment("Is it fully automatic forging?").define("enableAutoForging", true);
         enableForgingTip = BUILDER.comment("Is the next recommended step highlighted?").define("enableDebug", true);
+        enablePacketForging = BUILDER.comment("Send forging operation packets directly instead of simulating GUI button clicks, only effective when enableAutoForging is on, and suppresses anvil hit sounds locally").define("enablePacketForging", false);
         autoForgingCooldown = BUILDER.comment("cooldown of each automatic forging step(tick)").defineInRange("autoForgingCooldown", 1, 1, 200);
         highlightStepCooldown = BUILDER.comment("The duration of each frame of the highlight step(tick)").defineInRange("highlightStepCooldown", 2, 1, 1000);
         totalFrames = BUILDER.comment("Total number of frames in the highlight step animation").defineInRange("totalFrames", 16, 1, 100);

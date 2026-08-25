@@ -1,7 +1,9 @@
 {
-  "key.eternal130.switchAutoForging":"切换自动锻造功能开闭",
-  "key.eternal130.switchAutoForging.info":"自动锻造功能已被切换为%s",
-  "key.eternal130.switchForgingTip":"切换锻造提示功能开闭",
-  "key.eternal130.switchForgingTip.info":"锻造提示功能已被切换为%s",
-  "key.categories.tfcaf":"群峦tng自动锻造"
+  "key.eternal130.switchAutoForging": "切换自动锻造功能开闭",
+  "key.eternal130.switchAutoForging.info": "自动锻造功能已被切换为%s",
+  "key.eternal130.switchForgingTip": "切换锻造提示功能开闭",
+  "key.eternal130.switchForgingTip.info": "锻造提示功能已被切换为%s",
+  "key.categories.tfcaf": "群峦tng自动锻造",
+  "key.eternal130.switchPacketForging": "切换发包锻造模式开闭",
+  "key.eternal130.switchPacketForging.info": "发包锻造模式已被切换为%s（需开启自动锻造）"
 }
