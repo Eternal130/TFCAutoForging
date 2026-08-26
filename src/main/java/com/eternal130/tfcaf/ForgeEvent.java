@@ -8,7 +8,6 @@ import java.util.Arrays;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
-import net.dries007.tfc.client.screen.AnvilPlanScreen;
 import net.dries007.tfc.client.screen.AnvilScreen;
 import net.dries007.tfc.common.blockentities.AnvilBlockEntity;
 import net.dries007.tfc.common.capabilities.forge.ForgeRule;
@@ -41,7 +40,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 @Mod.EventBusSubscriber(modid = "tfcaf", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
-public class forgeEvent {
+public class ForgeEvent {
     static ResourceLocation res = new ResourceLocation("tfcaf", "textures/gui/highlight_step.png");// 锻造提示的纹理
     static boolean wasInAnvilGui = false; // 跟踪上一次是否在铁砧GUI中
     // 本件锻造任务开始时输入槽物品的标识(item的数字id),用于检测输入槽物品被替换

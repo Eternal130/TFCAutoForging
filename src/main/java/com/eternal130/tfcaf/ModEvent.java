@@ -8,7 +8,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
 @Mod.EventBusSubscriber(modid = "tfcaf", bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-public class modEvent {
+public class ModEvent {
     @SubscribeEvent
     public static void registerBindings(RegisterKeyMappingsEvent event) {
         TFCAutoForging.switchAutoForging = new KeyMapping("key.eternal130.switchAutoForging", GLFW.GLFW_KEY_F, "key.categories.tfcaf");

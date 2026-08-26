@@ -49,7 +49,7 @@ public class TFCAutoForging
 
         // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ConfigFile.CONFIG);
-//        new forgeEvent();
+//        new ForgeEvent();
     }
 
     private void setup(final FMLClientSetupEvent event)
