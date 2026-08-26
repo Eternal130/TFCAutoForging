@@ -15,7 +15,7 @@ public class ConfigFile {
     public static final ForgeConfigSpec.IntValue framesPerColumn;// 材质每列帧数
     public static final ForgeConfigSpec.IntValue textureWidth;// 材质宽度
     public static final ForgeConfigSpec.IntValue textureHeight;// 材质高度
-    public static ForgeConfigSpec CONFIG;
+    public static final ForgeConfigSpec CONFIG;
 
     public ConfigFile() {}
 

@@ -15,59 +15,57 @@ public class Util {
     // 下面两个map用于将锻造按钮的k和锻造要求步骤的k映射到operations上
     public static final Map<Integer, Integer> operationsTfc = new HashMap<>();
     public static final Map<Integer, Integer> buttonMapping = new HashMap<>();
-    // 下面这个map用于将最后三步的步骤重映射到operations上
-    public static final Map<Integer, Integer> stepTFC = new HashMap<>();
 
-    public static boolean isFinalStep(int Difference, int[] lastRules, ForgeSteps itemRules) {
-        /**
-         * 判断即将执行的这步是否为本件的最后一步.
-         *
-         * @param Difference 目标锻造值-当前锻造值-锻造偏移值
-         * @param lastRules  锻造步骤要求
-         * @param itemRules  最后三步步骤
-         * @return 是否为最后一步
-         */
-        return Difference + operations[lastRules[2]] + operations[lastRules[1]] == 0
+    /**
+     * 判断即将执行的这步是否为本件的最后一步.
+     *
+     * @param difference 目标锻造值-当前锻造值-锻造偏移值
+     * @param lastRules  锻造步骤要求
+     * @param itemRules  最后三步步骤
+     * @return 是否为最后一步
+     */
+    public static boolean isFinalStep(int difference, int[] lastRules, ForgeSteps itemRules) {
+        return difference + operations[lastRules[2]] + operations[lastRules[1]] == 0
                 && buttonMapping.get(itemRules.last().ordinal()) == lastRules[1]
                 && buttonMapping.get(itemRules.secondLast().ordinal()) == lastRules[2];
     }
 
-    public static int nextOperationOffset(int Difference, int[] lastRules, ForgeSteps itemRules) {
-        /**
-         * 计算下一步步骤.
-         *
-         * @param Difference 目标锻造值-当前锻造值-锻造偏移值
-         * @param lastRules  锻造步骤要求
-         * @param itemRules  最后三步步骤
-         * @return 下一步锻造步骤在operations中的键值
-         */
-//        TFCAutoForging.logger.info(TFCAutoForging.MODID + ":差值减偏移值{}", Difference);
+    /**
+     * 计算下一步步骤.
+     *
+     * @param difference 目标锻造值-当前锻造值-锻造偏移值
+     * @param lastRules  锻造步骤要求
+     * @param itemRules  最后三步步骤
+     * @return 下一步锻造步骤在operations中的键值
+     */
+    public static int nextOperationOffset(int difference, int[] lastRules, ForgeSteps itemRules) {
+//        TFCAutoForging.logger.info(TFCAutoForging.MODID + ":差值减偏移值{}", difference);
 //        TFCAutoForging.logger.info("要求三步:{} {} {}", lastRules[0],lastRules[1],lastRules[2]);
 //        TFCAutoForging.logger.info("最后三步:{} {} {}", buttonMapping.get(itemRules.getStep(2).ordinal()),buttonMapping.get(itemRules.getStep(1).ordinal()),buttonMapping.get(itemRules.getStep(0).ordinal()));
         // 如果偏移差值+要求倒三步+要求倒二步==0,并且当前倒一步是要求倒二步,当前倒二步是要求倒三步
         // 这意味着在满足减去偏移值的基础上,又完成了要求的倒二和倒三,因此下一步就是倒一
-        if (Difference + operations[lastRules[2]] + operations[lastRules[1]] == 0
+        if (difference + operations[lastRules[2]] + operations[lastRules[1]] == 0
                 && buttonMapping.get(itemRules.last().ordinal()) == lastRules[1]
                 && buttonMapping.get(itemRules.secondLast().ordinal()) == lastRules[2]) {
 //             TFCAutoForging.logger.info(TFCAutoForging.MODID + ":完成前两步");
             return lastRules[0];
             // 如果偏移差值+要求倒三步==0,并且当前倒一是要求倒三步
             // 这意味着满足减去偏移值的基础上,又完成了要求的倒数第三步,因此下一步是倒二
-        } else if (Difference + operations[lastRules[2]] == 0 && buttonMapping.get(itemRules.last().ordinal()) == lastRules[2]) {
+        } else if (difference + operations[lastRules[2]] == 0 && buttonMapping.get(itemRules.last().ordinal()) == lastRules[2]) {
 //             TFCAutoForging.logger.info(TFCAutoForging.MODID + ":完成一步");
             return lastRules[1];
             // 如果偏移差值为0,意味着已经完成锻造要求外的其他步骤,因此下一步是锻造要求的倒数第三步
-        } else if (Difference == 0) {
+        } else if (difference == 0) {
 //             TFCAutoForging.logger.info(TFCAutoForging.MODID + ":完成对齐");
             return lastRules[2];
         }
 //         TFCAutoForging.logger.info("未对齐");
-//         TFCAutoForging.logger.info("差值:{}", Difference + operations[lastRules[2]] + operations[lastRules[1]]);
+//         TFCAutoForging.logger.info("差值:{}", difference + operations[lastRules[2]] + operations[lastRules[1]]);
 //         TFCAutoForging.logger.info("倒数第一步{}与要求倒二{}", operationsTfc.get(itemRules.getStep(2).ordinal()), lastRules[1]);
 //         TFCAutoForging.logger.info("倒数第二步{}与要求倒三{}", operationsTfc.get(itemRules.getStep(1).ordinal()), lastRules[2]);
         // 上面判定没有通过,意味着还没有进入收尾步骤,下一步从查表获取的步骤列表中获取步骤,
         // 因为列表是有序的,因此从两侧查找,能够保证尽快靠近锻造要求数值
-        int[] step = steps.get(Difference);
+        int[] step = steps.get(difference);
         for (int i = 0; i < 7; i++) {
             if (step[7 - i] > 0) {
                 return 7 - i;
