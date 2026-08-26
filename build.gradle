@@ -106,6 +106,18 @@ jar.finalizedBy('reobfJar')
 // However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
 //publish.dependsOn('reobfJar')
 
+// Expand tokens in mcmod.info: ${modVersion} excludes the mc version prefix (e.g. "1.7")
+def modVersion = System.getenv('VERSION') ?: mod_version
+processResources {
+    inputs.property 'modVersion', modVersion
+    inputs.property 'mcversion', project.mc_version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'modVersion': modVersion, 'mcversion': project.mc_version
+    }
+}
+
 repositories {
     maven {
         url "https://cursemaven.com"
