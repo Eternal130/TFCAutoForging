@@ -174,6 +174,16 @@ jar {
 
 // Example configuration to allow publishing using the maven-publish plugin
 // This is the preferred method to reobfuscate your jar file
+// Expand tokens in mods.toml: ${modVersion} excludes the mc version prefix (e.g. "1.7")
+def modVersion = System.getenv('VERSION') ?: mod_version
+processResources {
+    inputs.property 'modVersion', modVersion
+
+    filesMatching('META-INF/mods.toml') {
+        expand 'modVersion': modVersion
+    }
+}
+
 jar.finalizedBy('reobfJar')
 // However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
 // publish.dependsOn('reobfJar')
