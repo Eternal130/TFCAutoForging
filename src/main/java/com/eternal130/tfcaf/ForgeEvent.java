@@ -1,16 +1,10 @@
 package com.eternal130.tfcaf;
 
-import static com.eternal130.tfcaf.ConfigFile.enableAutoForging;
-import static com.eternal130.tfcaf.ConfigFile.enableForgingTip;
-
-import java.lang.reflect.Field;
-import java.util.Arrays;
-
+import com.eternal130.tfcaf.util.ForgingUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.dries007.tfc.client.screen.AnvilScreen;
 import net.dries007.tfc.common.blockentities.AnvilBlockEntity;
-import net.dries007.tfc.common.capabilities.forge.ForgeRule;
 import net.dries007.tfc.common.capabilities.forge.ForgeStep;
 import net.dries007.tfc.common.capabilities.forge.ForgeSteps;
 import net.dries007.tfc.common.capabilities.forge.Forging;
@@ -32,12 +26,16 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.event.sound.PlaySoundEvent;
-import net.minecraftforge.network.PacketDistributor;
-
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.network.PacketDistributor;
 import org.joml.Matrix4f;
+
+import java.lang.reflect.Field;
+
+import static com.eternal130.tfcaf.ConfigFile.enableAutoForging;
+import static com.eternal130.tfcaf.ConfigFile.enableForgingTip;
 
 @Mod.EventBusSubscriber(modid = "tfcaf", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class ForgeEvent {
@@ -159,9 +157,9 @@ public class ForgeEvent {
                     // 下面那个变量内存有最后三步
                     ForgeSteps steps = forging.getSteps();
                     // 用于存储锻造要求，其中的值为Util类中operations的索引
-                    int[] lastOperations = getRules(AnvilRecipe.getRules());
+                    int[] lastOperations = ForgingUtil.getRules(AnvilRecipe.getRules());
                     for (int i = 0; i < 3; i++) {
-                        ruleOffset += Util.operations[lastOperations[i]];
+                            ruleOffset += ForgingUtil.operations[lastOperations[i]];
                     }
                     // GuiAnvil中drawItemRulesImages方法绘制最后三步步骤,drawRulesImages方法绘制锻造要求
                     // drawItemRulesImages中rules保存锻造要求,索引从左到右分别为012,itemRules保存最后三步,索引从左到右分别为012
@@ -170,8 +168,8 @@ public class ForgeEvent {
                     int x = (event.getScreen().width - 176) / 2;
                     int y = (event.getScreen().height - 207) / 2;
                     // 保存下一步锻造步骤,值为为Util类中operations的索引
-                    int offsetNextOperation = Util
-                            .nextOperationOffset(targetPoint - currentPoint - ruleOffset, lastOperations, steps);
+                    int offsetNextOperation = PathCalculate
+                            .nextOperationOffset(targetPoint, currentPoint, lastOperations, steps);
                     // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":偏移值{}", ruleOffset);
                     // TFCAutoForging.LOG.info(TFCAutoForging.MODID + ":锻造要求{},{},{}", lastOperations[0],
                     // lastOperations[1], lastOperations[2]);
@@ -242,28 +240,28 @@ public class ForgeEvent {
                             int burstPoint = currentPoint;
                             int burstGuard = 0;
                             while (burstGuard++ < 40) {
-                                int offset = Util.nextOperationOffset(
-                                    targetPoint - burstPoint - ruleOffset,
+                                int offset = PathCalculate.nextOperationOffset(
+                                    targetPoint, burstPoint,
                                     lastOperations,
                                     steps);
-                                if (offset < 0) {
+                                if (offset < 0 || offset == 8) {
                                     break;
                                 }
                                 // 越界保险:服务器数值超过150会销毁物品(炸砧),推导起点若与服务器失准,
                                 // 序列可能把服务器数值推过上限,宁可中止本轮等待burstTimeout自愈重推
-                                if (burstPoint + Util.operations[offset] > 150
-                                    || burstPoint + Util.operations[offset] < 0) {
+                                if (burstPoint + ForgingUtil.operations[offset] > 150
+                                    || burstPoint + ForgingUtil.operations[offset] < 0) {
                                     break;
                                 }
-                                finalStrikeSent = Util.isFinalStep(
+                                finalStrikeSent = ForgingUtil.isFinalStep(
                                     targetPoint - burstPoint - ruleOffset,
                                     lastOperations,
                                     steps);
                                 PacketHandler.send(
                                     PacketDistributor.SERVER.noArg(),
-                                    new ScreenButtonPacket(Util.buttonMapping.get(offset), null));
-                                burstPoint += Util.operations[offset];
-                                steps.addStep(ForgeStep.values()[Util.buttonMapping.get(offset)]);
+                                    new ScreenButtonPacket(Util.buttonMapping[offset], null));
+                                burstPoint += ForgingUtil.operations[offset];
+                                steps.addStep(ForgeStep.values()[Util.buttonMapping[offset]]);
                                 if (finalStrikeSent) {
                                     // 最后一步已发出,记录终点预测值供兜底超时判断,等待服务器产物顶替确认
                                     predictedPoint = burstPoint;
@@ -277,7 +275,7 @@ public class ForgeEvent {
                             TFCAutoForging.isWaitingForServer = true;
                             TFCAutoForging.waitTimeout = TFCAutoForging.WAIT_TIMEOUT_TICKS;
                             // 本次点击为本件最后一步时置标志,等待服务器确认完工(产物顶替)后停机
-                            finalStrikeSent = Util.isFinalStep(
+                            finalStrikeSent = ForgingUtil.isFinalStep(
                                 targetPoint - currentPoint - ruleOffset,
                                 lastOperations,
                                 steps);
@@ -369,66 +367,6 @@ public class ForgeEvent {
         fields.setAccessible(true);
         return (AnvilBlockEntity.AnvilInventory) fields.get(te);
     }
-    private static int[] getRules(ForgeRule[] rules) {
-        // 相对于1.7版本,没有any类型,每种步骤也只有五种位置,少了LastTwo这种类型,因此少遍历一次
-        int[] lastOperations = new int[3];
-        // 将锻造要求初始化为-1,表示没有要求
-        Arrays.fill(lastOperations, -1);
-        // 标志该位置要求是否已经被填充
-        boolean[] flag = new boolean[3];
-        // 首先遍历一次锻造目标,将确定位置的步骤填充到lastOperations中,例如Hit_Last,Hit_Second_Last,Hit_Third_Last
-        // 因为hit的last和notlast相比于其他步骤是反序的,因此单独摘出来判断
-        for (ForgeRule rule : rules) {
-            // 这三种序号对5取余后分别是1,3,4,Hit_Last的序号是2,Hit_Not_Last的序号是1,单独摘出来判断
-            if ((rule.ordinal() != 1 && rule.ordinal() % 5 == 1 && !flag[0]) || rule.ordinal() == 2) {
-                lastOperations[0] = Util.operationsTfc.get(rule.ordinal());
-                flag[0] = true;
-            } else if (rule.ordinal() % 5 == 3 && !flag[1]) {
-                lastOperations[1] = Util.operationsTfc.get(rule.ordinal());
-                flag[1] = true;
-            } else if (rule.ordinal() % 5 == 4 && !flag[2]) {
-                lastOperations[2] = Util.operationsTfc.get(rule.ordinal());
-                flag[2] = true;
-            }
-        }
-        // 第二次遍历,填充可以位于倒数第二步和倒数第三步的步骤,例如Hit_Not_Last
-        // 其他步骤的Not_last序号对5取余后是2，Hit_Not_Last的序号是1，因此单独摘出来判断
-        for (ForgeRule rule : rules) {
-            // 这一步的序号对5取余后是2
-            if ((rule.ordinal() != 2 && rule.ordinal() % 5 == 2) || rule.ordinal() == 1){
-                // 如果倒数第三步已经填充,说明倒数第三步是已经定死的步骤,不可以更改,如果能进入这里的循环并且两个位置都已经填满,说明该锻造配方无法完成
-                // 所以当倒数第三步已经填充,就将倒数第二步填充为当前步骤,否则填充最后一步
-                if (flag[2]) {
-                    lastOperations[1] = Util.operationsTfc.get(rule.ordinal());
-                    flag[1] = true;
-                } else {
-                    lastOperations[2] = Util.operationsTfc.get(rule.ordinal());
-                    flag[2] = true;
-                }
-            }
-        }
-        // 最后一次遍历,填充剩余的步骤,这里的步骤是可以位于任意位置的步骤,例如BendAny
-        for (ForgeRule rule : rules) {
-            // 这个步骤的序号对5取余后是0
-            if (rule.ordinal() % 5 == 0) {
-                // 遍历lastOperations,如果有空位就填充,并且因为锻造需求里每步出现一次,所以只填充一次,跳出大循环
-                for (int i = 0; i < 3; i++) {
-                    if (!flag[i]) {
-                        lastOperations[i] = Util.operationsTfc.get(rule.ordinal());
-                        flag[i] = true;
-                        break;
-                    }
-                }
-            }
-        }
-        // 如果还有空位,说明锻造需求不满3个,这时将空位填入4,对应锻造数值是2,此时未遍历的需求只有Any,对于Any,填入的数值依然是4
-        for (int i = 0; i < 3; i++) {
-            if (!flag[i]) {
-                lastOperations[i] = 4;
-            }
-        }
-        return lastOperations;
-    }
 
     private static void drawbox(int x, int y, PoseStack poseStack) {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -439,7 +377,7 @@ public class ForgeEvent {
 
         int frame = (int) ((Minecraft.getInstance().level.getGameTime() / ConfigFile.highlightStepCooldown.get()) % ConfigFile.totalFrames.get());
         float uMin = (frame % ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerRow.get();
-        float vMin = (frame / ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerColumn.get();
+        float vMin = ((float) frame / ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerColumn.get();
         float uMax = uMin + 1.0f / ConfigFile.framesPerRow.get();
         float vMax = vMin + 1.0f / ConfigFile.framesPerColumn.get();
         Matrix4f matrix = poseStack.last().pose();
