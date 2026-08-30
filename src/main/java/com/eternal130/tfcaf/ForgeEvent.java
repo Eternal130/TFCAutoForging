@@ -377,7 +377,8 @@ public class ForgeEvent {
 
         int frame = (int) ((Minecraft.getInstance().level.getGameTime() / ConfigFile.highlightStepCooldown.get()) % ConfigFile.totalFrames.get());
         float uMin = (frame % ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerRow.get();
-        float vMin = ((float) frame / ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerColumn.get();
+        // 不要听从 IDEA 的提示把分子改成float！
+        float vMin = (frame / ConfigFile.framesPerRow.get()) / (float) ConfigFile.framesPerColumn.get();
         float uMax = uMin + 1.0f / ConfigFile.framesPerRow.get();
         float vMax = vMin + 1.0f / ConfigFile.framesPerColumn.get();
         Matrix4f matrix = poseStack.last().pose();
